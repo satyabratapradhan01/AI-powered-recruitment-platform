@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getApplicationsApi, getRecommendedJobsApi } from '../services/api';
+import {
+  getApplicationsApi,
+  getRecommendedJobsApi,
+  getInterviewsApi,
+  getNotificationsApi,
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { mockJobs, mockInterviews, mockNotifications, mockProfile } from '../data/seekerMockData';
 import StatusBadge from '../components/StatusBadge';
 import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -16,7 +20,6 @@ import {
   Send,
   Calendar,
   Award,
-  XCircle,
   Plus,
   ArrowRight,
   Sparkles,
@@ -26,7 +29,6 @@ import {
   Clock,
   ExternalLink,
   MapPin,
-  CheckCircle2,
   Check,
   AlertCircle,
 } from 'lucide-react';
@@ -40,12 +42,15 @@ const Dashboard = () => {
   const [recommendations, setRecommendations] = useState([]);
   const [recLoading, setRecLoading] = useState(true);
 
+  const [upcomingInterviews, setUpcomingInterviews] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
       const appRes = await getApplicationsApi();
-      setApplications(appRes.data.data);
+      setApplications(appRes.data?.data || []);
     } catch (err) {
       console.error('Error fetching dashboard applications:', err);
       setError(err.response?.data?.message || 'Failed to load dashboard statistics');
@@ -56,12 +61,28 @@ const Dashboard = () => {
     try {
       setRecLoading(true);
       const recRes = await getRecommendedJobsApi();
-      setRecommendations(recRes.data.data || []);
+      setRecommendations(recRes.data?.data || []);
     } catch (err) {
       console.error('Error fetching job recommendations:', err);
       setRecommendations([]);
     } finally {
       setRecLoading(false);
+    }
+
+    try {
+      const interviewRes = await getInterviewsApi({ upcoming: true });
+      setUpcomingInterviews(interviewRes.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching interviews:', err);
+      setUpcomingInterviews([]);
+    }
+
+    try {
+      const notifRes = await getNotificationsApi();
+      setNotifications(notifRes.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setNotifications([]);
     }
   };
 
@@ -82,7 +103,8 @@ const Dashboard = () => {
     )
     .slice(0, 5);
 
-  const upcomingInterview = mockInterviews.find((i) => i.type === 'Upcoming');
+  const upcomingInterview = upcomingInterviews[0];
+  const unreadCount = notifications.filter((n) => !n.read && !n.isRead).length;
 
   const stats = [
     {
@@ -123,7 +145,7 @@ const Dashboard = () => {
             Welcome back, {user?.name || 'Applicant'}! 👋
           </h1>
           <p className="text-xs sm:text-sm text-indigo-200/90 max-w-xl">
-            You have <strong className="text-white">{upcomingInterview ? '1 upcoming interview' : '0 pending interviews'}</strong> and <strong className="text-white">{mockNotifications.filter(n => !n.isRead).length} new notifications</strong>.
+            You have <strong className="text-white">{upcomingInterview ? '1 upcoming interview' : '0 pending interviews'}</strong> and <strong className="text-white">{unreadCount} unread notifications</strong>.
           </p>
         </div>
 
@@ -146,15 +168,22 @@ const Dashboard = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-slate-900 text-sm">Profile Completion</h3>
-                <Badge variant="purple" size="xs">94% Complete</Badge>
+                <Badge variant="purple" size="xs">
+                  {user?.skills && user.skills.length > 0 ? '100% Complete' : '80% Complete'}
+                </Badge>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Add 2 more skill tags to reach 100% profile optimization score.
+                {user?.skills && user.skills.length > 0
+                  ? 'Your profile skills and resume are active for AI matching.'
+                  : 'Add technical skills to optimize your AI job recommendation match score.'}
               </p>
             </div>
           </div>
           <div className="w-full sm:w-48 bg-slate-200 rounded-full h-2 overflow-hidden">
-            <div className="bg-indigo-600 h-full rounded-full w-[94%]" />
+            <div
+              className="bg-indigo-600 h-full rounded-full transition-all"
+              style={{ width: user?.skills && user.skills.length > 0 ? '100%' : '80%' }}
+            />
           </div>
           <Link to="/profile">
             <Button variant="outline" size="xs">
@@ -217,31 +246,35 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-bold text-slate-900 text-base">
-                        {upcomingInterview.jobTitle}
+                        {upcomingInterview.applicationId?.jobTitle || upcomingInterview.interviewType || 'Interview'}
                       </h4>
                       <p className="text-xs font-bold text-indigo-600">
-                        {upcomingInterview.company}
+                        {upcomingInterview.applicationId?.company || 'Recruiter'}
                       </p>
                     </div>
                     <Badge variant="warning" showDot size="xs">
-                      {upcomingInterview.date}
+                      {upcomingInterview.interviewDate}
                     </Badge>
                   </div>
                   <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-amber-100/80">
                     <p className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.time} ({upcomingInterview.format})
+                      <Clock className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewTime} ({upcomingInterview.duration || 45} mins)
                     </p>
-                    <p className="flex items-center gap-1.5">
-                      <UserCheck className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewer}
-                    </p>
+                    {upcomingInterview.interviewerName && (
+                      <p className="flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewerName}
+                      </p>
+                    )}
                   </div>
-                  <div className="pt-2 flex justify-end">
-                    <a href={upcomingInterview.joinUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="primary" size="xs" rightIcon={ExternalLink}>
-                        Join Video Call
-                      </Button>
-                    </a>
-                  </div>
+                  {upcomingInterview.meetingLink && (
+                    <div className="pt-2 flex justify-end">
+                      <a href={upcomingInterview.meetingLink} target="_blank" rel="noopener noreferrer">
+                        <Button variant="primary" size="xs" rightIcon={ExternalLink}>
+                          Join Video Call
+                        </Button>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <EmptyState
@@ -271,15 +304,25 @@ const Dashboard = () => {
               </Link>
             </CardHeader>
             <CardContent className="space-y-3">
-              {mockNotifications.slice(0, 3).map((n) => (
-                <div key={n.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">{n.title}</span>
-                    <span className="text-[10px] text-slate-400 font-medium">{n.timestamp}</span>
+              {notifications.length === 0 ? (
+                <EmptyState
+                  icon={Bell}
+                  title="No recent alerts"
+                  description="Status updates and notifications will appear here."
+                />
+              ) : (
+                notifications.slice(0, 3).map((n) => (
+                  <div key={n._id || n.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">{n.title}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {n.createdAt ? new Date(n.createdAt).toLocaleDateString() : 'Just now'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
                   </div>
-                  <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </div>

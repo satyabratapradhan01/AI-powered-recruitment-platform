@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { mockJobs } from '../data/seekerMockData';
-import { createApplicationApi } from '../services/api';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { getJobByIdApi, createApplicationApi, getApplicationsApi } from '../services/api';
+import Card, { CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
+import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import { useToast } from '../context/ToastContext';
 import {
   ArrowLeft,
   MapPin,
   Briefcase,
   DollarSign,
-  Calendar,
-  Sparkles,
-  CheckCircle2,
-  Building2,
   Clock,
   Send,
+  CheckCircle2,
+  Building2,
+  Sparkles,
 } from 'lucide-react';
 
 const JobDetails = () => {
@@ -25,34 +25,87 @@ const JobDetails = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
+  const [existingApplication, setExistingApplication] = useState(null);
 
-  const job = mockJobs.find((j) => j.id === id) || mockJobs[0];
+  useEffect(() => {
+    fetchJobDetails();
+  }, [id]);
+
+  const fetchJobDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getJobByIdApi(id);
+      setJob(res.data?.data || null);
+
+      // Check if candidate has already applied to this job
+      try {
+        const appRes = await getApplicationsApi({ jobId: id });
+        const list = appRes.data?.data || [];
+        if (list.length > 0) {
+          setHasApplied(true);
+          setExistingApplication(list[0]);
+        }
+      } catch (err) {
+        // optional check
+      }
+    } catch (err) {
+      console.error('Error fetching job details:', err);
+      setError(err.response?.data?.message || 'Job position not found');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleApply = async () => {
+    if (!job) return;
     try {
       setIsApplying(true);
-      // Create record in existing backend API!
-      await createApplicationApi({
-        company: job.company,
-        jobTitle: job.title,
-        location: job.location,
-        jobUrl: window.location.href,
-        status: 'Applied',
+      const res = await createApplicationApi({
+        jobId: job._id,
+        coverLetter: `Expressing strong interest in the ${job.title} position at ${job.company}.`,
       });
 
       setHasApplied(true);
-      toast.success(`Successfully applied to ${job.company} for ${job.title}!`);
+      setExistingApplication(res.data?.data);
+      toast.success(res.data?.message || `Successfully applied to ${job.company} for ${job.title}!`);
     } catch (err) {
       console.error('Apply error:', err);
-      // Fallback for mock view
-      setHasApplied(true);
-      toast.success(`Applied to ${job.company}!`);
+      toast.error(err.response?.data?.message || 'Failed to submit job application');
     } finally {
       setIsApplying(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <SkeletonCard />
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Link to="/jobs">
+          <Button variant="ghost" size="xs" leftIcon={ArrowLeft}>
+            Back to Jobs
+          </Button>
+        </Link>
+        <ErrorState title="Job Position Not Found" message={error || 'This job posting may have expired.'} onRetry={fetchJobDetails} />
+      </div>
+    );
+  }
+
+  const requiredSkills = job.requiredSkills || [];
+  const preferredSkills = job.preferredSkills || [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -72,7 +125,7 @@ const JobDetails = () => {
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6 border-b border-slate-100">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl shrink-0 shadow-md">
-                {job.company[0]}
+                {job.company ? job.company[0] : 'C'}
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -80,23 +133,25 @@ const JobDetails = () => {
                     {job.title}
                   </h1>
                   <Badge variant="purple" showDot size="sm">
-                    {job.matchScore}% AI Match
+                    {job.workMode || 'Full-time'}
                   </Badge>
                 </div>
                 <p className="text-sm font-bold text-slate-700">{job.company}</p>
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    {job.location} ({job.workMode})
+                    {job.location || 'Remote'}
                   </span>
                   <span className="flex items-center gap-1">
                     <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                    {job.employmentType}
+                    {job.employmentType || 'Full-time'}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    {job.experience}
-                  </span>
+                  {job.experienceRequired && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      {job.experienceRequired}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -120,66 +175,76 @@ const JobDetails = () => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
             <div>
               <p className="text-slate-400 font-semibold uppercase text-[10px]">Salary Range</p>
-              <p className="font-bold text-slate-800 mt-0.5">{job.salary}</p>
+              <p className="font-bold text-slate-800 mt-0.5">
+                {job.salaryMin ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax?.toLocaleString()}` : 'Competitive'}
+              </p>
             </div>
             <div>
               <p className="text-slate-400 font-semibold uppercase text-[10px]">Posted Date</p>
-              <p className="font-bold text-slate-800 mt-0.5">{job.postedDate}</p>
+              <p className="font-bold text-slate-800 mt-0.5">
+                {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently'}
+              </p>
             </div>
             <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px]">Deadline</p>
-              <p className="font-bold text-slate-800 mt-0.5">{job.deadline}</p>
+              <p className="text-slate-400 font-semibold uppercase text-[10px]">Status</p>
+              <p className="font-bold text-emerald-600 mt-0.5">{job.status || 'Active'}</p>
             </div>
             <div>
-              <p className="text-slate-400 font-semibold uppercase text-[10px]">ATS Match</p>
-              <p className="font-bold text-indigo-600 mt-0.5">{job.matchScore}% Compatibility</p>
+              <p className="text-slate-400 font-semibold uppercase text-[10px]">Department</p>
+              <p className="font-bold text-indigo-600 mt-0.5">{job.department || 'Engineering'}</p>
             </div>
           </div>
 
           {/* Skill Requirements Chips */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Required Skill Stack
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {job.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="px-3 py-1 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100"
-                >
-                  {skill}
-                </span>
-              ))}
+          {requiredSkills.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Required Skill Stack
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {requiredSkills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Preferred Skill Stack */}
+          {preferredSkills.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Preferred Skills
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {preferredSkills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="space-y-3 pt-2">
             <h3 className="text-sm font-bold text-slate-900">About the Role</h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
               {job.description}
             </p>
           </div>
 
-          {/* Responsibilities */}
-          {job.responsibilities && (
-            <div className="space-y-3 pt-2">
-              <h3 className="text-sm font-bold text-slate-900">Key Responsibilities</h3>
-              <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-                {job.responsibilities.map((resp, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <span>{resp}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* Bottom Action */}
           <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500 font-medium">
-              Application closes on {job.deadline}
+              {hasApplied ? 'You have already submitted an application for this role.' : 'Ready to take the next step in your career?'}
             </span>
             <Button
               variant={hasApplied ? 'success' : 'primary'}

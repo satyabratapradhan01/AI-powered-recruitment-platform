@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mockPostedJobs, mockApplicants, mockHRInterviews } from '../../data/hrMockData';
+import { getJobsApi, getApplicationsApi, getInterviewsApi } from '../../services/api';
 import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Table, { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import Avatar from '../../components/ui/Avatar';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { SkeletonCard, SkeletonTable } from '../../components/ui/SkeletonLoader';
 import {
   Briefcase,
   Users,
@@ -14,23 +17,52 @@ import {
   Plus,
   ArrowRight,
   Sparkles,
-  CheckCircle2,
-  TrendingUp,
   Clock,
   ExternalLink,
 } from 'lucide-react';
 
 const HRDashboard = () => {
-  const activeJobsCount = mockPostedJobs.filter((j) => j.status === 'Active').length;
-  const totalApplicantsCount = mockApplicants.length;
-  const interviewsCount = mockHRInterviews.filter((i) => i.status === 'Upcoming').length;
-  const selectedCount = mockApplicants.filter((a) => a.status === 'Selected').length;
+  const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [interviews, setInterviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const topMatchingApplicants = [...mockApplicants]
-    .sort((a, b) => b.matchScore - a.matchScore)
+  useEffect(() => {
+    fetchHRDashboardData();
+  }, []);
+
+  const fetchHRDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [jobsRes, appRes, intRes] = await Promise.all([
+        getJobsApi(),
+        getApplicationsApi(),
+        getInterviewsApi(),
+      ]);
+
+      setJobs(jobsRes.data?.data || []);
+      setApplications(appRes.data?.data || []);
+      setInterviews(intRes.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching HR dashboard:', err);
+      setError(err.response?.data?.message || 'Failed to load recruiter console');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activeJobsCount = jobs.filter((j) => j.status === 'Active' || !j.status).length;
+  const totalApplicantsCount = applications.length;
+  const upcomingInterviews = interviews.filter((i) => i.status === 'Scheduled' || i.status === 'Rescheduled');
+  const selectedCount = applications.filter((a) => a.status === 'Selected').length;
+
+  const topMatchingApplicants = [...applications]
+    .sort((a, b) => (b.atsScore || 75) - (a.atsScore || 75))
     .slice(0, 3);
 
-  const upcomingInterview = mockHRInterviews.find((i) => i.status === 'Upcoming');
+  const upcomingInterview = upcomingInterviews[0];
 
   const stats = [
     {
@@ -47,7 +79,7 @@ const HRDashboard = () => {
     },
     {
       label: 'Interviews Scheduled',
-      count: interviewsCount,
+      count: upcomingInterviews.length,
       icon: Calendar,
       color: 'text-amber-600 bg-amber-50 border-amber-100',
     },
@@ -127,29 +159,38 @@ const HRDashboard = () => {
               </Link>
             </CardHeader>
             <CardContent className="space-y-3">
-              {topMatchingApplicants.map((cand) => (
-                <div
-                  key={cand.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-100/60 transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar name={cand.candidateName} size="md" status="online" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-slate-900 text-sm">{cand.candidateName}</h4>
-                        <Badge variant="purple" size="xs">{cand.matchScore}% AI Match</Badge>
+              {loading ? (
+                <SkeletonCard />
+              ) : topMatchingApplicants.length === 0 ? (
+                <EmptyState icon={Users} title="No applicants yet" description="Posted jobs will receive applicant submissions here." />
+              ) : (
+                topMatchingApplicants.map((app) => {
+                  const candidateName = app.candidateId?.name || app.candidateName || 'Candidate';
+                  return (
+                    <div
+                      key={app._id}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-slate-100/60 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar name={candidateName} size="md" status="online" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 text-sm">{candidateName}</h4>
+                            <Badge variant="purple" size="xs">{app.atsScore || 75}% AI Match</Badge>
+                          </div>
+                          <p className="text-xs font-semibold text-slate-600">{app.jobTitle}</p>
+                          <p className="text-[11px] text-slate-400">{app.company}</p>
+                        </div>
                       </div>
-                      <p className="text-xs font-semibold text-slate-600">{cand.jobTitle}</p>
-                      <p className="text-[11px] text-slate-400">{cand.location}</p>
+                      <Link to="/hr/applicants">
+                        <Button variant="outline" size="xs">
+                          Review
+                        </Button>
+                      </Link>
                     </div>
-                  </div>
-                  <Link to={`/hr/applicants`}>
-                    <Button variant="outline" size="xs">
-                      Review
-                    </Button>
-                  </Link>
-                </div>
-              ))}
+                  );
+                })
+              )}
             </CardContent>
           </Card>
         </div>
@@ -175,29 +216,39 @@ const HRDashboard = () => {
                 <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-100 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-slate-900 text-base">{upcomingInterview.candidateName}</h4>
-                      <p className="text-xs font-bold text-indigo-600">{upcomingInterview.jobTitle}</p>
+                      <h4 className="font-bold text-slate-900 text-base">
+                        {upcomingInterview.candidateId?.name || 'Candidate'}
+                      </h4>
+                      <p className="text-xs font-bold text-indigo-600">
+                        {upcomingInterview.applicationId?.jobTitle || 'Role'}
+                      </p>
                     </div>
-                    <Badge variant="warning" showDot size="xs">{upcomingInterview.date}</Badge>
+                    <Badge variant="warning" showDot size="xs">
+                      {upcomingInterview.interviewDate}
+                    </Badge>
                   </div>
                   <div className="text-xs text-slate-600 space-y-1 pt-1 border-t border-amber-100">
                     <p className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.time} ({upcomingInterview.format})
+                      <Clock className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewTime} ({upcomingInterview.duration || 60} mins)
                     </p>
-                    <p className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewer}
-                    </p>
+                    {upcomingInterview.interviewerName && (
+                      <p className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-amber-600" /> {upcomingInterview.interviewerName}
+                      </p>
+                    )}
                   </div>
-                  <div className="pt-2 flex justify-end">
-                    <a href={upcomingInterview.joinUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="primary" size="xs" rightIcon={ExternalLink}>
-                        Launch Meeting
-                      </Button>
-                    </a>
-                  </div>
+                  {upcomingInterview.meetingLink && (
+                    <div className="pt-2 flex justify-end">
+                      <a href={upcomingInterview.meetingLink} target="_blank" rel="noopener noreferrer">
+                        <Button variant="primary" size="xs" rightIcon={ExternalLink}>
+                          Launch Meeting
+                        </Button>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="p-6 text-center text-xs text-slate-500">No interviews scheduled.</div>
+                <EmptyState icon={Calendar} title="No upcoming interviews" description="Scheduled interviews will appear here." />
               )}
             </CardContent>
           </Card>
@@ -215,65 +266,73 @@ const HRDashboard = () => {
           </div>
           <Link to="/hr/applicants">
             <Button variant="ghost" size="xs" rightIcon={ArrowRight}>
-              View All Applicants ({mockApplicants.length})
+              View All Applicants ({applications.length})
             </Button>
           </Link>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Candidate</TableHead>
-                <TableHead>Applied Position</TableHead>
-                <TableHead>AI Match</TableHead>
-                <TableHead>Applied Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockApplicants.map((app) => (
-                <TableRow key={app.id}>
-                  <TableCell className="font-bold text-slate-900 flex items-center gap-2.5">
-                    <Avatar name={app.candidateName} size="xs" />
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{app.candidateName}</p>
-                      <p className="text-[10px] text-slate-400">{app.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-700">{app.jobTitle}</TableCell>
-                  <TableCell>
-                    <Badge variant="purple" size="xs">{app.matchScore}% Match</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">{app.appliedDate}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        app.status === 'Shortlisted'
-                          ? 'primary'
-                          : app.status === 'Selected'
-                          ? 'success'
-                          : app.status === 'Rejected'
-                          ? 'danger'
-                          : 'info'
-                      }
-                      showDot
-                      size="xs"
-                    >
-                      {app.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link to="/hr/applicants">
-                      <Button variant="outline" size="xs">
-                        Review Profile
-                      </Button>
-                    </Link>
-                  </TableCell>
+          {loading ? (
+            <SkeletonTable rows={5} />
+          ) : error ? (
+            <ErrorState title="Error Loading Applicants" message={error} onRetry={fetchHRDashboardData} />
+          ) : applications.length === 0 ? (
+            <EmptyState title="No applicants recorded" description="Posted jobs will display applicant submissions here." />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Applied Position</TableHead>
+                  <TableHead>AI Match</TableHead>
+                  <TableHead>Applied Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {applications.slice(0, 5).map((app) => {
+                  const candidateName = app.candidateId?.name || app.candidateName || 'Applicant';
+                  const candidateEmail = app.candidateId?.email || app.email || '';
+
+                  let statusVariant = 'info';
+                  if (app.status === 'Shortlisted') statusVariant = 'purple';
+                  if (app.status === 'Selected') statusVariant = 'success';
+                  if (app.status === 'Rejected') statusVariant = 'danger';
+
+                  return (
+                    <TableRow key={app._id}>
+                      <TableCell className="font-bold text-slate-900 flex items-center gap-2.5">
+                        <Avatar name={candidateName} size="xs" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">{candidateName}</p>
+                          <p className="text-[10px] text-slate-400">{candidateEmail}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-slate-700">{app.jobTitle}</TableCell>
+                      <TableCell>
+                        <Badge variant="purple" size="xs">{app.atsScore || 75}% Match</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant} showDot size="xs">
+                          {app.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link to="/hr/applicants">
+                          <Button variant="outline" size="xs">
+                            Review Profile
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

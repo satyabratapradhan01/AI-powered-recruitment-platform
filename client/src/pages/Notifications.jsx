@@ -1,66 +1,100 @@
-import React, { useState } from 'react';
-import { mockNotifications } from '../data/seekerMockData';
-import Card, { CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import {
+  getNotificationsApi,
+  markNotificationReadApi,
+  markAllNotificationsReadApi,
+} from '../services/api';
+import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
 import Tabs from '../components/ui/Tabs';
 import EmptyState from '../components/ui/EmptyState';
+import ErrorState from '../components/ui/ErrorState';
+import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import { useToast } from '../context/ToastContext';
-import { Bell, CheckCheck, Calendar, Briefcase, Info, AlertCircle } from 'lucide-react';
+import { Bell, CheckCheck, Calendar, Briefcase, Info } from 'lucide-react';
 
 const Notifications = () => {
   const toast = useToast();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('All');
 
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getNotificationsApi();
+      setNotifications(res.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError(err.response?.data?.message || 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsReadApi();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })));
+      toast.success('All notifications marked as read.');
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+      toast.error('Failed to mark all notifications as read.');
+    }
+  };
+
+  const handleToggleReadStatus = async (id, isRead) => {
+    if (isRead) return;
+    try {
+      await markNotificationReadApi(id);
+      setNotifications((prev) =>
+        prev.map((n) => ((n._id || n.id) === id ? { ...n, read: true, isRead: true } : n))
+      );
+      toast.success('Notification marked as read.');
+    } catch (err) {
+      console.error('Error marking notification read:', err);
+    }
+  };
+
   const filteredNotifications = notifications.filter((n) => {
-    if (activeTab === 'Unread') return !n.isRead;
-    if (activeTab === 'Interviews') return n.type === 'interview';
-    if (activeTab === 'Jobs') return n.type === 'job';
+    const isUnread = !n.read && !n.isRead;
+    if (activeTab === 'Unread') return isUnread;
+    if (activeTab === 'Interviews') return n.type?.includes('interview');
+    if (activeTab === 'Applications') return n.type?.includes('application') || n.type?.includes('status');
     return true;
   });
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    toast.success('All notifications marked as read');
-  };
-
-  const toggleReadStatus = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
-  };
+  const unreadCount = notifications.filter((n) => !n.read && !n.isRead).length;
 
   const tabs = [
     { id: 'All', label: 'All Notifications', count: notifications.length },
-    {
-      id: 'Unread',
-      label: 'Unread',
-      count: notifications.filter((n) => !n.isRead).length,
-    },
+    { id: 'Unread', label: 'Unread', count: unreadCount },
     {
       id: 'Interviews',
       label: 'Interviews',
-      count: notifications.filter((n) => n.type === 'interview').length,
+      count: notifications.filter((n) => n.type?.includes('interview')).length,
     },
     {
-      id: 'Jobs',
-      label: 'Jobs & ATS',
-      count: notifications.filter((n) => n.type === 'job' || n.type === 'status').length,
+      id: 'Applications',
+      label: 'Applications',
+      count: notifications.filter((n) => n.type?.includes('application') || n.type?.includes('status')).length,
     },
   ];
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'interview':
-        return <Calendar className="w-5 h-5 text-amber-600" />;
-      case 'job':
-        return <Briefcase className="w-5 h-5 text-indigo-600" />;
-      case 'status':
-        return <CheckCheck className="w-5 h-5 text-emerald-600" />;
-      default:
-        return <Info className="w-5 h-5 text-sky-600" />;
+  const getNotificationIcon = (type = '') => {
+    if (type.includes('interview')) {
+      return <Calendar className="w-5 h-5 text-amber-600" />;
     }
+    if (type.includes('application') || type.includes('job')) {
+      return <Briefcase className="w-5 h-5 text-indigo-600" />;
+    }
+    return <Info className="w-5 h-5 text-sky-600" />;
   };
 
   return (
@@ -72,7 +106,7 @@ const Notifications = () => {
             Notification Center
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time updates on application status changes, interview schedules, and AI job recommendations.
+            Real-time updates on application status changes, interview schedules, and AI match notifications.
           </p>
         </div>
 
@@ -80,7 +114,8 @@ const Notifications = () => {
           variant="outline"
           size="xs"
           leftIcon={CheckCheck}
-          onClick={markAllAsRead}
+          onClick={handleMarkAllRead}
+          isDisabled={unreadCount === 0}
         >
           Mark All as Read
         </Button>
@@ -97,7 +132,11 @@ const Notifications = () => {
       </div>
 
       {/* Content */}
-      {filteredNotifications.length === 0 ? (
+      {loading ? (
+        <SkeletonCard />
+      ) : error ? (
+        <ErrorState title="Error Loading Notifications" message={error} onRetry={fetchNotifications} />
+      ) : filteredNotifications.length === 0 ? (
         <EmptyState
           icon={Bell}
           title="No notifications found"
@@ -105,38 +144,47 @@ const Notifications = () => {
         />
       ) : (
         <Card variant="default" className="divide-y divide-slate-100 shadow-sm">
-          {filteredNotifications.map((notif) => (
-            <div
-              key={notif.id}
-              className={`p-5 flex items-start justify-between gap-4 transition-colors ${
-                !notif.isRead ? 'bg-indigo-50/40' : 'hover:bg-slate-50/50'
-              }`}
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs shrink-0 mt-0.5">
-                  {getNotificationIcon(notif.type)}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-slate-900 text-sm">{notif.title}</h4>
-                    {!notif.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed">{notif.message}</p>
-                  <p className="text-[11px] text-slate-400 font-medium">{notif.timestamp}</p>
-                </div>
-              </div>
+          {filteredNotifications.map((notif) => {
+            const notifId = notif._id || notif.id;
+            const isRead = notif.read || notif.isRead;
 
-              <button
-                type="button"
-                onClick={() => toggleReadStatus(notif.id)}
-                className="text-xs font-semibold text-slate-400 hover:text-indigo-600 transition shrink-0"
+            return (
+              <div
+                key={notifId}
+                className={`p-5 flex items-start justify-between gap-4 transition-colors ${
+                  !isRead ? 'bg-indigo-50/40' : 'hover:bg-slate-50/50'
+                }`}
               >
-                {notif.isRead ? 'Mark Unread' : 'Mark Read'}
-              </button>
-            </div>
-          ))}
+                <div className="flex items-start gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs shrink-0 mt-0.5">
+                    {getNotificationIcon(notif.type)}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-slate-900 text-sm">{notif.title}</h4>
+                      {!isRead && (
+                        <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{notif.message}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {notif.createdAt ? new Date(notif.createdAt).toLocaleString() : 'Just now'}
+                    </p>
+                  </div>
+                </div>
+
+                {!isRead && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReadStatus(notifId, isRead)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition shrink-0"
+                  >
+                    Mark Read
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </Card>
       )}
     </div>

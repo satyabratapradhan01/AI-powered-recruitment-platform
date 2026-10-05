@@ -1,51 +1,116 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { createJobApi, getJobByIdApi, updateJobApi } from '../../services/api';
 import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
-import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, Calendar, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, Calendar, CheckCircle2 } from 'lucide-react';
 
 const HRJobCreate = () => {
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const toast = useToast();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingJob, setLoadingJob] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
+    company: 'TechCorp AI Solutions',
     department: 'Engineering',
-    location: '',
-    workMode: 'Hybrid',
+    location: 'Remote - US',
+    workMode: 'Remote',
     employmentType: 'Full-time',
-    salary: '',
-    experience: '3-5 years',
+    salaryMin: 120000,
+    salaryMax: 160000,
+    experienceRequired: '3-5 years',
     requiredSkills: '',
     preferredSkills: '',
     description: '',
-    responsibilities: '',
-    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
+
+  useEffect(() => {
+    if (isEditMode) {
+      fetchJobDetails();
+    }
+  }, [id]);
+
+  const fetchJobDetails = async () => {
+    try {
+      setLoadingJob(true);
+      const res = await getJobByIdApi(id);
+      const job = res.data?.data;
+      if (job) {
+        setFormData({
+          title: job.title || '',
+          company: job.company || 'TechCorp AI Solutions',
+          department: job.department || 'Engineering',
+          location: job.location || '',
+          workMode: job.workMode || 'Remote',
+          employmentType: job.employmentType || 'Full-time',
+          salaryMin: job.salaryMin || 100000,
+          salaryMax: job.salaryMax || 150000,
+          experienceRequired: job.experienceRequired || '3-5 years',
+          requiredSkills: Array.isArray(job.requiredSkills) ? job.requiredSkills.join(', ') : job.requiredSkills || '',
+          preferredSkills: Array.isArray(job.preferredSkills) ? job.preferredSkills.join(', ') : job.preferredSkills || '',
+          description: job.description || '',
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching job for edit:', err);
+      toast.error('Failed to load job details.');
+    } finally {
+      setLoadingJob(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.location.trim()) {
       toast.error('Please fill in required job title and location');
       return;
     }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      toast.success(`Job posting "${formData.title}" published successfully!`);
+    const payload = {
+      title: formData.title,
+      company: formData.company,
+      department: formData.department,
+      location: formData.location,
+      workMode: formData.workMode,
+      employmentType: formData.employmentType,
+      salaryMin: Number(formData.salaryMin) || 0,
+      salaryMax: Number(formData.salaryMax) || 0,
+      experienceRequired: formData.experienceRequired,
+      requiredSkills: typeof formData.requiredSkills === 'string' ? formData.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean) : formData.requiredSkills,
+      preferredSkills: typeof formData.preferredSkills === 'string' ? formData.preferredSkills.split(',').map((s) => s.trim()).filter(Boolean) : formData.preferredSkills,
+      description: formData.description,
+    };
+
+    try {
+      setIsSubmitting(true);
+      if (isEditMode) {
+        const res = await updateJobApi(id, payload);
+        toast.success(res.data?.message || `Job posting "${formData.title}" updated successfully!`);
+      } else {
+        const res = await createJobApi(payload);
+        toast.success(res.data?.message || `Job posting "${formData.title}" published successfully!`);
+      }
       navigate('/hr/jobs');
-    }, 800);
+    } catch (err) {
+      console.error('Job submission error:', err);
+      toast.error(err.response?.data?.message || 'Failed to save job posting');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,17 +122,17 @@ const HRJobCreate = () => {
           </Button>
         </Link>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Create New Job Opening
+          {isEditMode ? 'Edit Job Posting' : 'Create New Job Opening'}
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Publish a new position requirement to match candidates with AI ATS scoring.
+          {isEditMode ? 'Update job requirements and technical criteria.' : 'Publish a new position requirement to match candidates with AI ATS scoring.'}
         </p>
       </div>
 
       <Card variant="default" className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-purple-600" /> Position Information
+            <Briefcase className="w-5 h-5 text-purple-600" /> Position Details
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -76,19 +141,20 @@ const HRJobCreate = () => {
               <Input
                 label="Job Title *"
                 name="title"
-                placeholder="e.g. Senior Full-Stack Developer"
+                placeholder="e.g. Senior AI Engineer"
                 value={formData.title}
                 onChange={handleChange}
                 leftIcon={Briefcase}
                 required
               />
               <Input
-                label="Department"
-                name="department"
-                placeholder="e.g. Engineering, Product Design"
-                value={formData.department}
+                label="Company Name *"
+                name="company"
+                placeholder="e.g. TechCorp AI Solutions"
+                value={formData.company}
                 onChange={handleChange}
                 leftIcon={Building2}
+                required
               />
             </div>
 
@@ -108,8 +174,8 @@ const HRJobCreate = () => {
                 value={formData.workMode}
                 onChange={handleChange}
                 options={[
-                  { value: 'Hybrid', label: 'Hybrid' },
                   { value: 'Remote', label: 'Remote' },
+                  { value: 'Hybrid', label: 'Hybrid' },
                   { value: 'Onsite', label: 'Onsite' },
                 ]}
               />
@@ -128,27 +194,27 @@ const HRJobCreate = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Input
-                label="Salary Range"
-                name="salary"
-                placeholder="e.g. $150,000 - $180,000 / yr"
-                value={formData.salary}
+                label="Salary Min ($)"
+                name="salaryMin"
+                type="number"
+                value={formData.salaryMin}
+                onChange={handleChange}
+                leftIcon={DollarSign}
+              />
+              <Input
+                label="Salary Max ($)"
+                name="salaryMax"
+                type="number"
+                value={formData.salaryMax}
                 onChange={handleChange}
                 leftIcon={DollarSign}
               />
               <Input
                 label="Experience Level"
-                name="experience"
+                name="experienceRequired"
                 placeholder="e.g. 3-5 years"
-                value={formData.experience}
+                value={formData.experienceRequired}
                 onChange={handleChange}
-              />
-              <Input
-                label="Application Deadline"
-                name="deadline"
-                type="date"
-                value={formData.deadline}
-                onChange={handleChange}
-                leftIcon={Calendar}
               />
             </div>
 
@@ -156,16 +222,16 @@ const HRJobCreate = () => {
               <Input
                 label="Required Skills (Comma separated) *"
                 name="requiredSkills"
-                placeholder="React, Node.js, MongoDB, TypeScript"
+                placeholder="React, Node.js, MongoDB, Express"
                 value={formData.requiredSkills}
                 onChange={handleChange}
-                helperText="AI ATS Engine matches candidates against these skills."
+                helperText="AI Candidate Matching evaluates candidate resumes against these skills."
                 required
               />
               <Input
                 label="Preferred Skills"
                 name="preferredSkills"
-                placeholder="Tailwind CSS, Docker, AWS"
+                placeholder="Docker, Cloudflare, AWS, Python"
                 value={formData.preferredSkills}
                 onChange={handleChange}
               />
@@ -174,19 +240,9 @@ const HRJobCreate = () => {
             <Textarea
               label="Job Description *"
               name="description"
-              rows={4}
-              placeholder="Detail the overall team objectives, candidate profile, and technical vision..."
+              rows={5}
+              placeholder="Detail the overall team objectives, engineering practices, and position responsibilities..."
               value={formData.description}
-              onChange={handleChange}
-              required
-            />
-
-            <Textarea
-              label="Key Responsibilities *"
-              name="responsibilities"
-              rows={3}
-              placeholder="List daily tasks, engineering practices, and cross-functional duties..."
-              value={formData.responsibilities}
               onChange={handleChange}
               required
             />
@@ -200,7 +256,7 @@ const HRJobCreate = () => {
                 leftIcon={CheckCircle2}
                 className="bg-purple-600 hover:bg-purple-500 text-white"
               >
-                Publish Job Posting
+                {isEditMode ? 'Save Job Changes' : 'Publish Job Posting'}
               </Button>
             </div>
           </form>

@@ -1,36 +1,54 @@
-import React, { useState } from 'react';
-import { mockInterviews } from '../data/seekerMockData';
-import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { getInterviewsApi } from '../services/api';
+import Card, { CardContent } from '../components/ui/Card';
 import Tabs from '../components/ui/Tabs';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
-import { Calendar, Clock, Video, User, FileText, ExternalLink, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import ErrorState from '../components/ui/ErrorState';
+import { SkeletonCard } from '../components/ui/SkeletonLoader';
+import { Calendar, Clock, Video, User, ExternalLink, Sparkles, HelpCircle } from 'lucide-react';
 
 const Interviews = () => {
+  const [interviews, setInterviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('Upcoming');
-  const [selectedInterview, setSelectedInterview] = useState(null);
-  const [prepModalOpen, setPrepModalOpen] = useState(false);
 
-  const filteredInterviews = mockInterviews.filter((int) => int.type === activeTab);
+  useEffect(() => {
+    fetchInterviews();
+  }, []);
+
+  const fetchInterviews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getInterviewsApi();
+      setInterviews(res.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching interviews:', err);
+      setError(err.response?.data?.message || 'Failed to load interview schedule');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const upcomingList = interviews.filter((i) => i.status === 'Scheduled' || i.status === 'Rescheduled');
+  const completedList = interviews.filter((i) => i.status === 'Completed');
+  const cancelledList = interviews.filter((i) => i.status === 'Cancelled');
+
+  const filteredInterviews =
+    activeTab === 'Upcoming'
+      ? upcomingList
+      : activeTab === 'Completed'
+      ? completedList
+      : cancelledList;
 
   const tabs = [
-    {
-      id: 'Upcoming',
-      label: 'Upcoming Interviews',
-      count: mockInterviews.filter((i) => i.type === 'Upcoming').length,
-    },
-    {
-      id: 'Completed',
-      label: 'Completed',
-      count: mockInterviews.filter((i) => i.type === 'Completed').length,
-    },
-    {
-      id: 'Cancelled',
-      label: 'Cancelled',
-      count: mockInterviews.filter((i) => i.type === 'Cancelled').length,
-    },
+    { id: 'Upcoming', label: 'Upcoming', count: upcomingList.length },
+    { id: 'Completed', label: 'Completed', count: completedList.length },
+    { id: 'Cancelled', label: 'Cancelled', count: cancelledList.length },
   ];
 
   return (
@@ -42,9 +60,14 @@ const Interviews = () => {
             Interview Schedule
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage upcoming hiring manager discussions, video calls, and access AI prep guidance.
+            Track hiring manager discussions, video meeting links, and access AI prep guidance.
           </p>
         </div>
+        <Link to="/interview-preparation">
+          <Button variant="primary" size="md" leftIcon={HelpCircle} className="bg-indigo-600 shadow-sm">
+            AI Interview Preparation
+          </Button>
+        </Link>
       </div>
 
       {/* Tabs */}
@@ -58,7 +81,14 @@ const Interviews = () => {
       </div>
 
       {/* Content */}
-      {filteredInterviews.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : error ? (
+        <ErrorState title="Error Loading Interviews" message={error} onRetry={fetchInterviews} />
+      ) : filteredInterviews.length === 0 ? (
         <EmptyState
           icon={Calendar}
           title={`No ${activeTab.toLowerCase()} interviews`}
@@ -66,124 +96,76 @@ const Interviews = () => {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredInterviews.map((item) => (
-            <Card
-              key={item.id}
-              variant="default"
-              className="p-6 flex flex-col justify-between space-y-4 border-slate-200/90 shadow-sm hover:shadow-md transition"
-            >
-              <CardContent className="p-0 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">{item.jobTitle}</h3>
-                    <p className="text-xs font-bold text-indigo-600 mt-0.5">{item.company}</p>
-                  </div>
-                  <Badge
-                    variant={
-                      item.type === 'Upcoming'
-                        ? 'warning'
-                        : item.type === 'Completed'
-                        ? 'success'
-                        : 'danger'
-                    }
-                    showDot
-                    size="xs"
-                  >
-                    {item.type}
-                  </Badge>
-                </div>
+          {filteredInterviews.map((item) => {
+            const app = item.applicationId || {};
+            const jobTitle = app.jobTitle || item.interviewType || 'Interview Session';
+            const company = app.company || 'Recruiter Company';
 
-                <div className="space-y-2 text-xs text-slate-600 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{item.date}</span>
-                    <Clock className="w-3.5 h-3.5 text-slate-400 ml-2" />
-                    <span>{item.time}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Video className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{item.format}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Interviewer: {item.interviewer}</span>
-                  </div>
-                </div>
+            let badgeVariant = 'warning';
+            if (item.status === 'Completed') badgeVariant = 'success';
+            if (item.status === 'Cancelled') badgeVariant = 'danger';
 
-                {item.notes && (
-                  <p className="text-xs text-slate-500 italic bg-amber-50/60 p-2.5 rounded-xl border border-amber-100">
-                    "{item.notes}"
-                  </p>
-                )}
-              </CardContent>
+            return (
+              <Card
+                key={item._id}
+                variant="default"
+                className="p-6 flex flex-col justify-between space-y-4 border-slate-200/90 shadow-sm hover:shadow-md transition"
+              >
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-base">{jobTitle}</h3>
+                      <p className="text-xs font-bold text-indigo-600 mt-0.5">{company}</p>
+                    </div>
+                    <Badge variant={badgeVariant} showDot size="xs">
+                      {item.status}
+                    </Badge>
+                  </div>
 
-              {item.type === 'Upcoming' && (
+                  <div className="space-y-2 text-xs text-slate-600 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{item.interviewDate}</span>
+                      <Clock className="w-3.5 h-3.5 text-slate-400 ml-2" />
+                      <span>{item.interviewTime} ({item.duration || 60} mins)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Video className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{item.interviewType || 'Technical Discussion'}</span>
+                    </div>
+                    {item.interviewerName && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Interviewer: {item.interviewerName}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {item.notes && (
+                    <p className="text-xs text-slate-500 italic bg-amber-50/60 p-2.5 rounded-xl border border-amber-100">
+                      "{item.notes}"
+                    </p>
+                  )}
+                </CardContent>
+
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    leftIcon={Sparkles}
-                    onClick={() => {
-                      setSelectedInterview(item);
-                      setPrepModalOpen(true);
-                    }}
-                  >
-                    AI Interview Prep
-                  </Button>
-                  {item.joinUrl && (
-                    <a href={item.joinUrl} target="_blank" rel="noopener noreferrer">
+                  <Link to="/interview-preparation">
+                    <Button variant="outline" size="xs" leftIcon={Sparkles}>
+                      AI Practice Questions
+                    </Button>
+                  </Link>
+                  {item.meetingLink && item.status !== 'Cancelled' && (
+                    <a href={item.meetingLink} target="_blank" rel="noopener noreferrer">
                       <Button variant="primary" size="xs" rightIcon={ExternalLink}>
-                        Join Video Call
+                        Join Meeting Call
                       </Button>
                     </a>
                   )}
                 </div>
-              )}
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
-      )}
-
-      {/* AI Prep Modal */}
-      {selectedInterview && (
-        <Modal
-          isOpen={prepModalOpen}
-          onClose={() => setPrepModalOpen(false)}
-          title={`AI Interview Prep — ${selectedInterview.company}`}
-          description={`Custom prep insights generated for ${selectedInterview.jobTitle}.`}
-          size="md"
-        >
-          <div className="space-y-4 py-2 text-xs text-slate-700">
-            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl space-y-1">
-              <p className="font-bold text-indigo-900 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-600" /> Key Topics to Expect
-              </p>
-              <p className="text-indigo-800 leading-relaxed">
-                {selectedInterview.prepNotes}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-bold text-slate-900 text-sm">Suggested Responses & Tips</h4>
-              <ul className="space-y-2 text-slate-600">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Highlight your MongoDB indexing & React performance optimization projects.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Use the STAR method (Situation, Task, Action, Result) for behavioral questions.</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
-              <Button variant="primary" size="sm" onClick={() => setPrepModalOpen(false)}>
-                Got It
-              </Button>
-            </div>
-          </div>
-        </Modal>
       )}
     </div>
   );

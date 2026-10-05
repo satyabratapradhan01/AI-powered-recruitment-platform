@@ -59,11 +59,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout handler
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    setError(null);
+  // Refresh user profile from backend
+  const refreshUser = async () => {
+    try {
+      const response = await getMeApi();
+      setUser(response.data.data);
+      return response.data.data;
+    } catch (err) {
+      console.error('User refresh failed:', err);
+    }
+  };
+
+  // Directly update user state in context
+  const updateUser = (userData) => {
+    setUser(userData);
   };
 
   const value = {
@@ -73,6 +82,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
+    updateUser,
     isAuthenticated: !!user,
   };
 

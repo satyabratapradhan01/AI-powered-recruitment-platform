@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
-import { mockApplicants, mockPostedJobs } from '../../data/hrMockData';
-import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import {
+  getApplicationsApi,
+  updateApplicationApi,
+  getCandidateMatchesApi,
+  getJobsApi,
+  getCandidateResumeApi,
+} from '../../services/api';
+import Card, { CardContent } from '../../components/ui/Card';
 import Table, { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -9,68 +15,175 @@ import Select from '../../components/ui/Select';
 import Modal from '../../components/ui/Modal';
 import Avatar from '../../components/ui/Avatar';
 import Textarea from '../../components/ui/Textarea';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import { SkeletonCard, SkeletonTable } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
 import {
-  Users,
   Search,
   Sparkles,
   CheckCircle2,
-  XCircle,
-  Calendar,
-  UserCheck,
   FileText,
-  Clock,
   Eye,
   GraduationCap,
   Briefcase,
   Save,
+  ExternalLink,
+  SortAsc,
 } from 'lucide-react';
 
 const HRApplicants = () => {
   const toast = useToast();
-  const [applicants, setApplicants] = useState(mockApplicants);
+  const [applications, setApplications] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [selectedJobFilter, setSelectedJobFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [sortByMatch, setSortByMatch] = useState(false);
+
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [recruiterNote, setRecruiterNote] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [resumeSignedUrl, setResumeSignedUrl] = useState(null);
 
-  // Filter
-  const filteredApplicants = applicants.filter((app) => {
-    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-    const query = searchQuery.toLowerCase();
-    const matchesQuery =
-      app.candidateName.toLowerCase().includes(query) ||
-      app.jobTitle.toLowerCase().includes(query) ||
-      app.email.toLowerCase().includes(query);
-    return matchesStatus && matchesQuery;
-  });
+  const [matchingLoading, setMatchingLoading] = useState(false);
+  const [candidateMatches, setCandidateMatches] = useState([]);
 
-  const handleUpdateStatus = (applicantId, newStatus) => {
-    setApplicants((prev) =>
-      prev.map((a) => (a.id === applicantId ? { ...a, status: newStatus } : a))
-    );
-    if (selectedApplicant && selectedApplicant.id === applicantId) {
-      setSelectedApplicant((prev) => ({ ...prev, status: newStatus }));
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [appRes, jobsRes] = await Promise.all([
+        getApplicationsApi(),
+        getJobsApi(),
+      ]);
+
+      setApplications(appRes.data?.data || []);
+      setJobs(jobsRes.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching HR applicants:', err);
+      setError(err.response?.data?.message || 'Failed to load applicant pipeline');
+    } finally {
+      setLoading(false);
     }
-    toast.success(`Updated applicant status to "${newStatus}"`);
   };
 
-  const handleSaveNotes = () => {
+  const handleRunAICandidateMatching = async (jobId) => {
+    if (!jobId || jobId === 'All') return;
+    try {
+      setMatchingLoading(true);
+      const res = await getCandidateMatchesApi(jobId);
+      const matches = res.data?.data || [];
+      setCandidateMatches(matches);
+      setSortByMatch(true);
+      toast.success(`AI Candidate Matching complete for job! (${matches.length} candidates analyzed)`);
+    } catch (err) {
+      console.error('Error running candidate matching:', err);
+      toast.error(err.response?.data?.message || 'Failed to run AI Candidate Matching');
+    } finally {
+      setMatchingLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (applicantId, newStatus) => {
+    try {
+      setUpdatingStatus(true);
+      const res = await updateApplicationApi(applicantId, {
+        status: newStatus,
+        recruiterNotes: recruiterNote || undefined,
+      });
+
+      const updatedApp = res.data?.data;
+      setApplications((prev) =>
+        prev.map((a) => (a._id === applicantId ? updatedApp || { ...a, status: newStatus } : a))
+      );
+
+      if (selectedApplicant && selectedApplicant._id === applicantId) {
+        setSelectedApplicant((prev) => ({ ...prev, status: newStatus }));
+      }
+      toast.success(`Applicant status updated to "${newStatus}"!`);
+    } catch (err) {
+      console.error('Update status error:', err);
+      toast.error(err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
     if (!selectedApplicant) return;
-    setApplicants((prev) =>
-      prev.map((a) =>
-        a.id === selectedApplicant.id ? { ...a, recruiterNotes: recruiterNote } : a
-      )
-    );
-    toast.success('Recruiter evaluation notes saved');
+    try {
+      await updateApplicationApi(selectedApplicant._id, {
+        recruiterNotes: recruiterNote,
+      });
+      setApplications((prev) =>
+        prev.map((a) =>
+          a._id === selectedApplicant._id ? { ...a, recruiterNotes: recruiterNote } : a
+        )
+      );
+      toast.success('Recruiter notes saved successfully!');
+    } catch (err) {
+      console.error('Save notes error:', err);
+      toast.error('Failed to save recruiter notes');
+    }
   };
 
-  const openApplicantDetails = (app) => {
+  const openApplicantDetails = async (app) => {
     setSelectedApplicant(app);
     setRecruiterNote(app.recruiterNotes || '');
     setDetailModalOpen(true);
+    setResumeSignedUrl(null);
+
+    const candidateId = app.candidateId?._id || app.candidateId;
+    if (candidateId) {
+      try {
+        const res = await getCandidateResumeApi(candidateId);
+        if (res.data?.data?.signedUrl) {
+          setResumeSignedUrl(res.data.data.signedUrl);
+        }
+      } catch (err) {
+        // resume may not exist
+      }
+    }
   };
+
+  // Filter
+  const filteredApplicants = applications.filter((app) => {
+    const candidate = app.candidateId || {};
+    const candidateName = candidate.name || app.candidateName || 'Applicant';
+    const candidateEmail = candidate.email || app.email || '';
+    const jobTitle = app.jobTitle || app.jobId?.title || '';
+
+    const matchesJob = selectedJobFilter === 'All' || app.jobId?._id === selectedJobFilter || app.jobId === selectedJobFilter;
+    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
+    const query = searchQuery.toLowerCase();
+    const matchesQuery =
+      candidateName.toLowerCase().includes(query) ||
+      jobTitle.toLowerCase().includes(query) ||
+      candidateEmail.toLowerCase().includes(query);
+
+    return matchesJob && matchesStatus && matchesQuery;
+  });
+
+  // Sort by AI Candidate Matching Score if available
+  const sortedApplicants = sortByMatch
+    ? [...filteredApplicants].sort((a, b) => {
+        const matchA = candidateMatches.find((m) => String(m.applicationId) === String(a._id));
+        const matchB = candidateMatches.find((m) => String(m.applicationId) === String(b._id));
+        const scoreA = matchA?.matchScore ?? a.atsScore ?? 0;
+        const scoreB = matchB?.matchScore ?? b.atsScore ?? 0;
+        return scoreB - scoreA;
+      })
+    : filteredApplicants;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -81,7 +194,7 @@ const HRApplicants = () => {
             Applicant Pipeline & AI Candidates
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Review submitted candidate profiles, evaluate ATS match scores, shortlist talent, and issue interview invites.
+            Review submitted candidate profiles, evaluate AI candidate match scores, update status, and manage hiring pipeline.
           </p>
         </div>
       </div>
@@ -90,97 +203,144 @@ const HRApplicants = () => {
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="w-full sm:w-80">
           <Input
-            placeholder="Search candidate name, job position, or email..."
+            placeholder="Search candidate name, position, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             leftIcon={Search}
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <Select
+            value={selectedJobFilter}
+            onChange={(e) => {
+              const jobId = e.target.value;
+              setSelectedJobFilter(jobId);
+              if (jobId !== 'All') {
+                handleRunAICandidateMatching(jobId);
+              }
+            }}
+            options={[
+              { value: 'All', label: 'All Posted Jobs' },
+              ...jobs.map((j) => ({ value: j._id, label: j.title })),
+            ]}
+          />
+
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             options={[
               { value: 'All', label: 'All Statuses' },
-              { value: 'Screening', label: 'Screening' },
+              { value: 'Applied', label: 'Applied' },
+              { value: 'Under Review', label: 'Under Review' },
               { value: 'Shortlisted', label: 'Shortlisted' },
               { value: 'Interview Scheduled', label: 'Interview Scheduled' },
               { value: 'Selected', label: 'Selected' },
               { value: 'Rejected', label: 'Rejected' },
             ]}
           />
+
+          {selectedJobFilter !== 'All' && (
+            <Button
+              variant="outline"
+              size="xs"
+              isLoading={matchingLoading}
+              leftIcon={Sparkles}
+              onClick={() => handleRunAICandidateMatching(selectedJobFilter)}
+            >
+              Run AI Match
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Table */}
       <Card variant="default">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Candidate</TableHead>
-                <TableHead>Applied Position</TableHead>
-                <TableHead>Matched Skills</TableHead>
-                <TableHead>AI Match Score</TableHead>
-                <TableHead>Applied Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredApplicants.map((cand) => (
-                <TableRow key={cand.id}>
-                  <TableCell className="font-bold text-slate-900 flex items-center gap-2.5">
-                    <Avatar name={cand.candidateName} size="xs" />
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">{cand.candidateName}</p>
-                      <p className="text-[10px] text-slate-400">{cand.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs font-semibold text-slate-700">{cand.jobTitle}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-xs">
-                      {cand.skills.slice(0, 3).map((s) => (
-                        <span key={s} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-semibold">
-                          {s}
-                        </span>
-                      ))}
-                      {cand.skills.length > 3 && (
-                        <span className="text-[10px] text-slate-400 font-bold">+{cand.skills.length - 3}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="purple" showDot size="xs">{cand.matchScore}% Match</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-slate-500">{cand.appliedDate}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        cand.status === 'Shortlisted'
-                          ? 'primary'
-                          : cand.status === 'Selected'
-                          ? 'success'
-                          : cand.status === 'Rejected'
-                          ? 'danger'
-                          : 'info'
-                      }
-                      showDot
-                      size="xs"
-                    >
-                      {cand.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="xs" leftIcon={Eye} onClick={() => openApplicantDetails(cand)}>
-                      Review
-                    </Button>
-                  </TableCell>
+          {loading ? (
+            <SkeletonTable rows={5} />
+          ) : error ? (
+            <ErrorState title="Error Loading Applicants" message={error} onRetry={fetchData} />
+          ) : sortedApplicants.length === 0 ? (
+            <EmptyState
+              title="No candidates found in pipeline"
+              description="No applications match your selected job or status filter."
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Applied Position</TableHead>
+                  <TableHead>Skills & Background</TableHead>
+                  <TableHead>AI Match Score</TableHead>
+                  <TableHead>Applied Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedApplicants.map((app) => {
+                  const candidate = app.candidateId || {};
+                  const candName = candidate.name || app.candidateName || 'Applicant';
+                  const candEmail = candidate.email || app.email || '';
+                  const skills = candidate.skills || app.skills || [];
+                  const jobTitle = app.jobTitle || app.jobId?.title || 'Role';
+
+                  const aiMatchObj = candidateMatches.find((m) => String(m.applicationId) === String(app._id));
+                  const matchScore = aiMatchObj?.matchScore ?? app.atsScore ?? 75;
+
+                  let statusVariant = 'info';
+                  if (app.status === 'Shortlisted') statusVariant = 'purple';
+                  if (app.status === 'Selected') statusVariant = 'success';
+                  if (app.status === 'Rejected') statusVariant = 'danger';
+
+                  return (
+                    <TableRow key={app._id}>
+                      <TableCell className="font-bold text-slate-900 flex items-center gap-2.5">
+                        <Avatar name={candName} size="xs" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">{candName}</p>
+                          <p className="text-[10px] text-slate-400">{candEmail}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold text-slate-700">{jobTitle}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {skills.slice(0, 3).map((s, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-semibold">
+                              {s}
+                            </span>
+                          ))}
+                          {skills.length > 3 && (
+                            <span className="text-[10px] text-slate-400 font-bold">+{skills.length - 3}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="purple" showDot size="xs">
+                          {matchScore}% Match
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-500">
+                        {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant} showDot size="xs">
+                          {app.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="xs" leftIcon={Eye} onClick={() => openApplicantDetails(app)}>
+                          Review
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -189,96 +349,62 @@ const HRApplicants = () => {
         <Modal
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
-          title={`Candidate Profile — ${selectedApplicant.candidateName}`}
-          description={`Applied for ${selectedApplicant.jobTitle} on ${selectedApplicant.appliedDate}`}
+          title={`Candidate Profile — ${selectedApplicant.candidateId?.name || 'Applicant'}`}
+          description={`Applied for ${selectedApplicant.jobTitle || 'Role'}`}
           size="lg"
         >
           <div className="space-y-6 py-2 text-xs text-slate-700">
             {/* Action Bar */}
             <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-wrap items-center justify-between gap-2">
-              <span className="font-bold text-slate-800">Pipeline Action:</span>
+              <span className="font-bold text-slate-800">Pipeline Status Action:</span>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant="primary"
+                  variant="outline"
                   size="xs"
-                  onClick={() => handleUpdateStatus(selectedApplicant.id, 'Shortlisted')}
+                  isLoading={updatingStatus}
+                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Shortlisted')}
                 >
                   Shortlist
                 </Button>
                 <Button
                   variant="success"
                   size="xs"
-                  onClick={() => handleUpdateStatus(selectedApplicant.id, 'Selected')}
+                  isLoading={updatingStatus}
+                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Selected')}
                 >
                   Select Candidate
                 </Button>
                 <Button
                   variant="danger"
                   size="xs"
-                  onClick={() => handleUpdateStatus(selectedApplicant.id, 'Rejected')}
+                  isLoading={updatingStatus}
+                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Rejected')}
                 >
                   Reject
                 </Button>
               </div>
             </div>
 
-            {/* ATS Score & Strengths */}
-            <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-600" /> AI ATS Resume Analysis
-                </h4>
-                <Badge variant="purple" size="xs">{selectedApplicant.atsAnalysis.score}% Match</Badge>
-              </div>
-              <div className="space-y-1 pt-1">
-                <p className="font-bold text-indigo-900">Strengths:</p>
-                <ul className="list-disc list-inside text-indigo-800 space-y-0.5">
-                  {selectedApplicant.atsAnalysis.strengths.map((str, idx) => (
-                    <li key={idx}>{str}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Candidate Resume Preview Card */}
+            {/* Resume Preview Card */}
             <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileText className="w-6 h-6 text-indigo-600" />
                 <div>
-                  <p className="font-bold text-slate-900">{selectedApplicant.resumeFilename}</p>
+                  <p className="font-bold text-slate-900">
+                    {selectedApplicant.resume?.fileName || selectedApplicant.resume?.originalName || 'Candidate Resume'}
+                  </p>
                   <p className="text-[10px] text-slate-400">Stored in Cloudflare R2 Bucket</p>
                 </div>
               </div>
-              <Button variant="outline" size="xs">
-                Download PDF
-              </Button>
-            </div>
-
-            {/* Education & Experience */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-indigo-600" /> Education
-                </h4>
-                {selectedApplicant.education.map((edu, i) => (
-                  <div key={i} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">{edu.degree}</p>
-                    <p className="text-[11px] text-slate-500">{edu.institution} ({edu.year})</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <Briefcase className="w-4 h-4 text-indigo-600" /> Work Experience
-                </h4>
-                {selectedApplicant.experience.map((exp, i) => (
-                  <div key={i} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800">{exp.title}</p>
-                    <p className="text-[11px] text-indigo-600 font-bold">{exp.company} ({exp.period})</p>
-                  </div>
-                ))}
-              </div>
+              {resumeSignedUrl ? (
+                <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="xs" rightIcon={ExternalLink}>
+                    View Resume PDF
+                  </Button>
+                </a>
+              ) : (
+                <span className="text-[11px] text-slate-400 italic">No resume attached</span>
+              )}
             </div>
 
             {/* Recruiter Notes */}
@@ -288,7 +414,7 @@ const HRApplicants = () => {
                 rows={3}
                 value={recruiterNote}
                 onChange={(e) => setRecruiterNote(e.target.value)}
-                placeholder="Add private feedback, interviewer comments, or screening notes..."
+                placeholder="Add private evaluation notes, screening observations, or team feedback..."
               />
               <div className="flex justify-end">
                 <Button variant="primary" size="xs" leftIcon={Save} onClick={handleSaveNotes}>
