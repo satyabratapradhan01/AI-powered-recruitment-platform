@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Briefcase, Sparkles, Menu, X, ArrowRight, UserCheck, Shield } from 'lucide-react';
+import Button from '../ui/Button';
 
 const LandingNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -30,140 +32,118 @@ const LandingNavbar = () => {
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100 py-3.5'
-          : 'bg-white/60 backdrop-blur-sm py-4'
+          ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200/80 py-3'
+          : 'bg-white/60 backdrop-blur-xs py-4'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center space-x-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform duration-200">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+            <Briefcase className="w-5 h-5" />
           </div>
-          <span className="text-xl font-extrabold text-gray-900 tracking-tight">
-            Job<span className="text-indigo-600">Track</span>
-          </span>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+                Talent<span className="text-indigo-600">AI</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                <Sparkles className="w-2.5 h-2.5" /> RECRUIT
+              </span>
+            </div>
+          </div>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center space-x-8">
+        {/* Desktop Nav Links */}
+        <nav className="hidden md:flex items-center space-x-7">
           <button
             onClick={() => scrollToSection('features')}
-            className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+            className="text-xs font-semibold text-slate-600 hover:text-indigo-600 transition"
           >
-            Features
+            AI Features
+          </button>
+          <button
+            onClick={() => scrollToSection('roles')}
+            className="text-xs font-semibold text-slate-600 hover:text-indigo-600 transition"
+          >
+            For Seekers & HR
           </button>
           <button
             onClick={() => scrollToSection('how-it-works')}
-            className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+            className="text-xs font-semibold text-slate-600 hover:text-indigo-600 transition"
           >
             How It Works
           </button>
-          <Link
-            to="/dashboard"
-            className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
+          <button
+            onClick={() => scrollToSection('dashboard-preview')}
+            className="text-xs font-semibold text-slate-600 hover:text-indigo-600 transition"
           >
             Dashboard
-          </Link>
-          <button
-            onClick={() => scrollToSection('features')}
-            className="text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors"
-          >
-            About
           </button>
         </nav>
 
-        {/* Desktop Action Buttons */}
-        <div className="hidden md:flex items-center space-x-4">
-          <Link
-            to="/login"
-            className="text-sm font-semibold text-gray-700 hover:text-indigo-600 px-3 py-2 transition-colors"
-          >
-            Login
+        {/* Action Buttons */}
+        <div className="hidden md:flex items-center space-x-3">
+          <Link to="/login">
+            <Button variant="ghost" size="sm">
+              Log In
+            </Button>
           </Link>
-          <Link
-            to="/register"
-            className="text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-lg shadow-sm shadow-indigo-200 hover:shadow-md transition-all duration-200"
-          >
-            Get Started
+          <Link to="/register">
+            <Button variant="primary" size="sm" rightIcon={ArrowRight}>
+              Get Started Free
+            </Button>
           </Link>
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="md:hidden flex items-center">
+        {/* Mobile Menu Trigger */}
+        <div className="md:hidden">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none transition-colors"
-            aria-label="Toggle Navigation Menu"
+            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition"
           >
-            {mobileMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Animated Dropdown Menu */}
+      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg border-b border-gray-200 px-4 pt-3 pb-6 space-y-3 transition-all duration-200 animate-fadeIn">
+        <div className="md:hidden bg-white border-b border-slate-200 p-4 space-y-3 animate-fade-in">
           <button
             onClick={() => scrollToSection('features')}
-            className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-md"
+            className="block w-full text-left py-2 text-sm font-semibold text-slate-700"
           >
-            Features
+            AI Features
+          </button>
+          <button
+            onClick={() => scrollToSection('roles')}
+            className="block w-full text-left py-2 text-sm font-semibold text-slate-700"
+          >
+            For Seekers & HR
           </button>
           <button
             onClick={() => scrollToSection('how-it-works')}
-            className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-md"
+            className="block w-full text-left py-2 text-sm font-semibold text-slate-700"
           >
             How It Works
           </button>
-          <Link
-            to="/dashboard"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-md"
-          >
-            Dashboard
-          </Link>
           <button
-            onClick={() => scrollToSection('features')}
-            className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/50 rounded-md"
+            onClick={() => scrollToSection('dashboard-preview')}
+            className="block w-full text-left py-2 text-sm font-semibold text-slate-700"
           >
-            About
+            Dashboard Preview
           </button>
-
-          <div className="pt-4 border-t border-gray-100 flex flex-col space-y-2">
-            <Link
-              to="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full text-center px-4 py-2.5 text-base font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition"
-            >
-              Login
+          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <Link to="/login">
+              <Button variant="outline" size="md" fullWidth>
+                Log In
+              </Button>
             </Link>
-            <Link
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full text-center px-4 py-2.5 text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition"
-            >
-              Get Started
+            <Link to="/register">
+              <Button variant="primary" size="md" fullWidth>
+                Get Started Free
+              </Button>
             </Link>
           </div>
         </div>

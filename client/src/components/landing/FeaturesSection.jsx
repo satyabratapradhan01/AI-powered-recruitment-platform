@@ -1,101 +1,147 @@
 import React from 'react';
+import {
+  Sparkles,
+  FileCheck,
+  Search,
+  Kanban,
+  CalendarCheck,
+  Users,
+  BrainCircuit,
+  BellRing,
+} from 'lucide-react';
+import Card, { CardContent } from '../ui/Card';
+import Badge from '../ui/Badge';
 
 const FeaturesSection = () => {
-  const features = [
+  const featureList = [
     {
-      title: 'Application Tracking',
-      description: 'Keep all your applications organized in one place with complete context.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      delay: 'delay-100',
+      id: 'ai-matching',
+      title: '1. AI Job Matching',
+      badge: 'Gemini AI',
+      badgeVariant: 'purple',
+      description:
+        'Analyzes candidate skill sets, experience, and career aspirations against live job postings to deliver automated compatibility matching.',
+      icon: Sparkles,
+      color: 'bg-purple-50 text-purple-600 border-purple-100',
     },
     {
-      title: 'Simple Dashboard',
-      description: 'See your entire job search at a glance with real-time metrics and breakdown.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-        </svg>
-      ),
-      delay: 'delay-200',
+      id: 'ats-score',
+      title: '2. ATS Resume Score',
+      badge: 'ATS Scanner',
+      badgeVariant: 'primary',
+      description:
+        'Parses resume PDFs, evaluates keyword density against job descriptions, and calculates a 0-100% ATS score with skill gap improvement tips.',
+      icon: FileCheck,
+      color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     },
     {
-      title: 'Status Tracking',
-      description: 'Track applications from Applied to Interview, Offer, or Rejected stages.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      delay: 'delay-300',
+      id: 'job-search',
+      title: '3. Intelligent Job Search',
+      badge: 'Discovery',
+      badgeVariant: 'info',
+      description:
+        'Filter opportunities by role, technology stack, salary range, location, and work style (Remote/Hybrid) with instant query indexing.',
+      icon: Search,
+      color: 'bg-sky-50 text-sky-600 border-sky-100',
     },
     {
-      title: 'Search & Filter',
-      description: 'Quickly find applications by company name, job role, location, or status.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      ),
-      delay: 'delay-400',
+      id: 'application-tracking',
+      title: '4. Application Tracking Pipeline',
+      badge: 'Kanban Pipeline',
+      badgeVariant: 'warning',
+      description:
+        'Monitor your application lifecycle across stage milestones: Applied, Screening, Interview Scheduled, Offer Received, and Decision.',
+      icon: Kanban,
+      color: 'bg-amber-50 text-amber-600 border-amber-100',
     },
     {
-      title: 'Secure Authentication',
-      description: 'Keep your personal job application data protected with JWT session security.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      ),
-      delay: 'delay-500',
+      id: 'interview-scheduling',
+      title: '5. Interview Scheduling & Prep',
+      badge: 'Cal & Prep',
+      badgeVariant: 'success',
+      description:
+        'Coordinate interview dates between candidates and HR recruiters with automated calendar sync, reminders, and AI sample Q&A prep.',
+      icon: CalendarCheck,
+      color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     },
     {
-      title: 'Easy Management',
-      description: 'Add, edit and delete applications with a simple and intuitive workflow.',
-      icon: (
-        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      ),
-      delay: 'delay-500',
+      id: 'hr-management',
+      title: '6. HR Candidate Management',
+      badge: 'Recruiter Portal',
+      badgeVariant: 'primary',
+      description:
+        'Empowers hiring managers to publish job postings, review applicant profiles, download private resumes from R2 storage, and manage shortlists.',
+      icon: Users,
+      color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    },
+    {
+      id: 'ai-candidate-ranking',
+      title: '7. AI Candidate Matching & Ranking',
+      badge: 'Recruitment AI',
+      badgeVariant: 'purple',
+      description:
+        'Automatically sorts and ranks applicant submissions for HR teams based on job requirements, skill weightings, and experience fit.',
+      icon: BrainCircuit,
+      color: 'bg-purple-50 text-purple-600 border-purple-100',
+    },
+    {
+      id: 'notifications',
+      title: '8. Real-time Notifications',
+      badge: 'SMTP Email',
+      badgeVariant: 'danger',
+      description:
+        'Instant status change notifications, email interview invitations, and recruiter updates sent seamlessly via Gmail SMTP.',
+      icon: BellRing,
+      color: 'bg-rose-50 text-rose-600 border-rose-100',
     },
   ];
 
   return (
     <section id="features" className="py-20 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3 mb-16 animate-fade-in-up">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wide">
-            <span>Core Capabilities</span>
+        <div className="text-center max-w-3xl mx-auto space-y-3 animate-fade-in-up">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wide">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Platform Capabilities</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
-            Everything you need to organize your job search
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            End-to-End AI Recruitment Suite
           </h2>
-          <p className="text-base sm:text-lg text-gray-600">
-            Keep your applications organized and know exactly where you stand.
+          <p className="text-sm sm:text-base text-slate-600">
+            From initial resume parsing to final candidate selection, explore the intelligent features powering job seekers and HR teams.
           </p>
         </div>
 
-        {/* 6 Feature Cards Grid with Staggered Entrance */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className={`bg-white border border-gray-200/90 rounded-2xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between animate-fade-in-up ${feature.delay}`}
-            >
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100/60 flex items-center justify-center">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 leading-snug">{feature.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
-            </div>
-          ))}
+        {/* 8 Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featureList.map((f) => {
+            const Icon = f.icon;
+            return (
+              <Card
+                key={f.id}
+                variant="interactive"
+                className="p-6 flex flex-col justify-between group hover:border-indigo-300"
+              >
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className={`p-3 rounded-2xl border ${f.color}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <Badge variant={f.badgeVariant} size="xs">
+                      {f.badge}
+                    </Badge>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug">
+                    {f.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {f.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>
