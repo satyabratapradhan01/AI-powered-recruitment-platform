@@ -1,15 +1,30 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Briefcase, Menu, LogOut, User, Sparkles } from 'lucide-react';
+import { Briefcase, Menu, LogOut, User, Sparkles, Shield } from 'lucide-react';
 import Avatar from './ui/Avatar';
 import Dropdown from './ui/Dropdown';
+import Badge from './ui/Badge';
 
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
 
+  const userRole = user?.role || 'seeker';
+
+  const roleLabels = {
+    seeker: 'Job Seeker',
+    hr: 'HR Recruiter',
+    admin: 'Platform Admin',
+  };
+
+  const roleVariants = {
+    seeker: 'info',
+    hr: 'purple',
+    admin: 'danger',
+  };
+
   const dropdownItems = [
     {
-      label: 'My Account',
+      label: `Signed in as ${user?.name || 'User'}`,
       icon: User,
       onClick: () => {},
     },
@@ -46,33 +61,39 @@ const Navbar = ({ onToggleSidebar }) => {
                   Talent<span className="text-indigo-600">AI</span>
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                  <Sparkles className="w-2.5 h-2.5" /> PRO
+                  <Sparkles className="w-2.5 h-2.5" /> RECRUIT
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right: User Profile Dropdown */}
+        {/* Right: Role Badge & User Profile Dropdown */}
         <div className="flex items-center gap-3">
           {user && (
-            <Dropdown
-              trigger={
-                <div className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100/80 transition cursor-pointer">
-                  <Avatar name={user.name} size="sm" status="online" />
-                  <div className="hidden sm:block text-left pr-1">
-                    <p className="text-xs font-bold text-slate-800 leading-tight">
-                      {user.name}
-                    </p>
-                    <p className="text-[11px] font-medium text-slate-500 leading-none mt-0.5">
-                      {user.email}
-                    </p>
+            <div className="flex items-center gap-3">
+              <Badge variant={roleVariants[userRole] || 'info'} size="xs" showDot>
+                {roleLabels[userRole] || 'Job Seeker'}
+              </Badge>
+
+              <Dropdown
+                trigger={
+                  <div className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-100/80 transition cursor-pointer">
+                    <Avatar name={user.name} size="sm" status="online" />
+                    <div className="hidden sm:block text-left pr-1">
+                      <p className="text-xs font-bold text-slate-800 leading-tight">
+                        {user.name}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-500 leading-none mt-0.5">
+                        {user.email}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              }
-              items={dropdownItems}
-              align="right"
-            />
+                }
+                items={dropdownItems}
+                align="right"
+              />
+            </div>
           )}
         </div>
       </div>

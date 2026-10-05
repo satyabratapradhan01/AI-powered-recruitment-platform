@@ -13,6 +13,9 @@ import {
   Kanban,
   ShieldCheck,
   TrendingUp,
+  Sparkles,
+  Building2,
+  FileCheck2,
   X,
 } from 'lucide-react';
 
@@ -20,46 +23,60 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
 
+  const userRole = user?.role || 'seeker';
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isHRRoute = location.pathname.startsWith('/hr');
 
+  // Determine active context role
+  const activeRole = isAdminRoute || userRole === 'admin'
+    ? 'admin'
+    : isHRRoute || userRole === 'hr'
+    ? 'hr'
+    : 'seeker';
+
+  // 1. Job Seeker navigation
   const seekerNavItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Find Jobs', path: '/jobs', icon: Search },
-    { label: 'Applications', path: '/applications', icon: Briefcase },
+    { label: 'My Applications', path: '/applications', icon: Briefcase },
+    { label: 'Resume / ATS', path: '/ats-score', icon: FileCheck2 },
     { label: 'Interviews', path: '/interviews', icon: Calendar },
-    { label: 'Profile', path: '/profile', icon: User },
     { label: 'Notifications', path: '/notifications', icon: Bell },
+    { label: 'Profile', path: '/profile', icon: User },
   ];
 
+  // 2. HR Recruiter navigation
   const hrNavItems = [
-    { label: 'HR Dashboard', path: '/hr/dashboard', icon: LayoutDashboard },
-    { label: 'My Posted Jobs', path: '/hr/jobs', icon: Briefcase },
-    { label: 'Create New Job', path: '/hr/jobs/new', icon: PlusCircle },
-    { label: 'Applicants Pipeline', path: '/hr/applicants', icon: Users },
-    { label: 'HR Interviews', path: '/hr/interviews', icon: Calendar },
+    { label: 'Dashboard', path: '/hr/dashboard', icon: LayoutDashboard },
+    { label: 'My Jobs', path: '/hr/jobs', icon: Briefcase },
+    { label: 'Post Job', path: '/hr/jobs/new', icon: PlusCircle },
+    { label: 'Applicants', path: '/hr/applicants', icon: Users },
+    { label: 'Interviews', path: '/hr/interviews', icon: Calendar },
+    { label: 'Notifications', path: '/hr/notifications', icon: Bell },
+    { label: 'Company Profile', path: '/hr/company-profile', icon: Building2 },
   ];
 
+  // 3. Admin navigation
   const adminNavItems = [
-    { label: 'Admin Overview', path: '/admin/dashboard', icon: LayoutDashboard },
-    { label: 'User Management', path: '/admin/users', icon: Users },
-    { label: 'Platform Jobs', path: '/admin/jobs', icon: Briefcase },
-    { label: 'System Applications', path: '/admin/applications', icon: Kanban },
-    { label: 'Platform Analytics', path: '/admin/analytics', icon: TrendingUp },
+    { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Users', path: '/admin/users', icon: Users },
+    { label: 'Jobs', path: '/admin/jobs', icon: Briefcase },
+    { label: 'Applications', path: '/admin/applications', icon: Kanban },
+    { label: 'Analytics', path: '/admin/analytics', icon: TrendingUp },
   ];
 
   let currentNavItems = seekerNavItems;
   let activeRoleColor = 'bg-indigo-600 shadow-indigo-500/20';
-  let portalTitle = 'Candidate Navigation';
+  let portalTitle = 'Job Seeker Workspace';
 
-  if (isAdminRoute) {
+  if (activeRole === 'admin') {
     currentNavItems = adminNavItems;
     activeRoleColor = 'bg-slate-900 shadow-slate-900/30';
-    portalTitle = 'Admin Operations Navigation';
-  } else if (isHRRoute) {
+    portalTitle = 'Admin Portal Workspace';
+  } else if (activeRole === 'hr') {
     currentNavItems = hrNavItems;
     activeRoleColor = 'bg-purple-600 shadow-purple-500/20';
-    portalTitle = 'Recruiter Navigation';
+    portalTitle = 'HR Recruiter Workspace';
   }
 
   const linkClasses = ({ isActive }) =>
@@ -84,12 +101,10 @@ const Sidebar = ({ isOpen, onClose }) => {
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Mobile Sidebar Close Header */}
           <div className="flex items-center justify-between pb-3 md:hidden border-b border-slate-100">
-            <span className="font-bold text-sm text-slate-800">
-              {isAdminRoute ? 'Admin Portal' : isHRRoute ? 'HR Recruiter Portal' : 'Candidate Portal'}
-            </span>
+            <span className="font-bold text-sm text-slate-800">{portalTitle}</span>
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-slate-600"
@@ -98,12 +113,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Portal Switcher Bar */}
+          {/* Role Switcher Bar */}
           <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
             <NavLink
               to="/dashboard"
               className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                !isHRRoute && !isAdminRoute ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                activeRole === 'seeker' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Candidate
@@ -111,7 +126,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <NavLink
               to="/hr/dashboard"
               className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                isHRRoute ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                activeRole === 'hr' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               HR
@@ -119,7 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <NavLink
               to="/admin/dashboard"
               className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                isAdminRoute ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+                activeRole === 'admin' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Admin
@@ -150,25 +165,21 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Sidebar Footer Info Card */}
         <div
           className={`p-3.5 border rounded-xl space-y-1.5 ${
-            isAdminRoute
+            activeRole === 'admin'
               ? 'bg-slate-900 text-white border-slate-800'
-              : isHRRoute
+              : activeRole === 'hr'
               ? 'bg-purple-50/60 border-purple-100'
               : 'bg-indigo-50/60 border-indigo-100'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-bold ${isAdminRoute ? 'text-slate-100' : isHRRole ? 'text-purple-950' : 'text-indigo-950'}`}>
-              {isAdminRoute ? 'Admin Control' : isHRRoute ? 'Recruiter Hub' : 'AI ATS Engine'}
+            <p className={`text-xs font-bold ${activeRole === 'admin' ? 'text-slate-100' : activeRole === 'hr' ? 'text-purple-950' : 'text-indigo-950'}`}>
+              {activeRole === 'admin' ? 'Admin Security' : activeRole === 'hr' ? 'Recruiter Hub' : 'AI ATS Engine'}
             </p>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <p className={`text-[11px] leading-snug ${isAdminRoute ? 'text-slate-400' : isHRRole ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
-            {isAdminRoute
-              ? 'System operational & active.'
-              : isHRRoute
-              ? 'Candidate ATS match active.'
-              : 'Resume matched with 94% score.'}
+          <p className={`text-[11px] leading-snug ${activeRole === 'admin' ? 'text-slate-400' : activeRole === 'hr' ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
+            Role Guard active.
           </p>
         </div>
       </aside>
