@@ -2,6 +2,10 @@ import JobApplication from '../models/JobApplication.js';
 import Job from '../models/Job.js';
 import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
+import {
+  sendApplicationSubmittedEmail,
+  sendApplicationStatusUpdateEmail,
+} from './emailService.js';
 
 /**
  * Recruitment Application Business Logic & Database Service.
@@ -9,6 +13,8 @@ import AppError from '../utils/AppError.js';
 
 export const createApplication = async (userId, data) => {
   const { jobId, company, jobTitle, location, jobUrl, coverLetter, resume, status, appliedDate } = data;
+
+  let application;
 
   // 1. If applying for a platform Job Posting (jobId provided)
   if (jobId) {
@@ -44,7 +50,7 @@ export const createApplication = async (userId, data) => {
       };
     }
 
-    const application = await JobApplication.create({
+    application = await JobApplication.create({
       jobId,
       candidateId: userId,
       userId,
@@ -58,11 +64,21 @@ export const createApplication = async (userId, data) => {
       appliedAt: new Date(),
     });
 
+    // Trigger email notification to candidate (async, failure won't rollback DB)
+    if (candidateUser && candidateUser.email) {
+      sendApplicationSubmittedEmail({
+        candidateEmail: candidateUser.email,
+        candidateName: candidateUser.name,
+        company: job.company,
+        jobTitle: job.title,
+      }).catch((err) => console.error('Email error:', err.message));
+    }
+
     return application;
   }
 
   // 2. Legacy custom tracker application entry (no jobId provided)
-  const application = await JobApplication.create({
+  application = await JobApplication.create({
     candidateId: userId,
     userId,
     company,
@@ -185,6 +201,7 @@ export const updateApplication = async (id, userId, userRole, updateData) => {
     throw new AppError('Forbidden: Access denied to update this application', 403);
   }
 
+  const oldStatus = application.status;
   const { status, recruiterNotes, company, jobTitle, location, jobUrl, coverLetter } = updateData;
 
   // Status transition validation
@@ -234,6 +251,26 @@ export const updateApplication = async (id, userId, userRole, updateData) => {
   if (coverLetter !== undefined) application.coverLetter = coverLetter;
 
   const updatedApplication = await application.save();
+
+  // Trigger status change email notification if status actually changed (no duplicates)
+  if (oldStatus !== updatedApplication.status) {
+    const candidateUser = await User.findById(
+      updatedApplication.candidateId || updatedApplication.userId
+    );
+
+    if (candidateUser && candidateUser.email) {
+      sendApplicationStatusUpdateEmail({
+        candidateEmail: candidateUser.email,
+        candidateName: candidateUser.name,
+        company: updatedApplication.company,
+        jobTitle: updatedApplication.jobTitle,
+        oldStatus,
+        newStatus: updatedApplication.status,
+        recruiterNotes: updatedApplication.recruiterNotes,
+      }).catch((err) => console.error('Email status error:', err.message));
+    }
+  }
+
   return updatedApplication;
 };
 
@@ -247,8 +284,23 @@ export const withdrawApplication = async (id, userId) => {
     throw new AppError('Job application not found', 404);
   }
 
+  const oldStatus = application.status;
   application.status = 'Withdrawn';
   await application.save();
+
+  if (oldStatus !== 'Withdrawn') {
+    const candidateUser = await User.findById(userId);
+    if (candidateUser && candidateUser.email) {
+      sendApplicationStatusUpdateEmail({
+        candidateEmail: candidateUser.email,
+        candidateName: candidateUser.name,
+        company: application.company,
+        jobTitle: application.jobTitle,
+        oldStatus,
+        newStatus: 'Withdrawn',
+      }).catch((err) => console.error('Email error:', err.message));
+    }
+  }
 
   return application;
 };

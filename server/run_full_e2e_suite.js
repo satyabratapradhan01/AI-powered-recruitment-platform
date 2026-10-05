@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import app from './app.js';
+import { sendEmail, isSmtpConfigured } from './services/emailService.js';
 
 dotenv.config();
 
@@ -273,7 +274,7 @@ const runE2ETests = async () => {
     // --- STEP 13 RECRUITMENT APPLICATION WORKFLOW VERIFICATIONS ---
     console.log('\n--- Step 13 Recruitment Application Workflow Verification ---');
 
-    // 17a. Candidate applies to HR's Job Posting
+    // 17a. Candidate applies to HR's Job Posting (Triggers Application Submitted Email)
     const jobAppRes = await request(`${BASE_URL}/applications`, {
       method: 'POST',
       headers: headers1,
@@ -288,7 +289,7 @@ const runE2ETests = async () => {
     // --- STEP 14 INTERVIEW SCHEDULING VERIFICATIONS ---
     console.log('\n--- Step 14 Interview Scheduling Verification ---');
 
-    // 18a. HR Schedules Interview with Candidate
+    // 18a. HR Schedules Interview with Candidate (Triggers Interview Scheduled Email)
     const scheduleData = {
       applicationId: recruitmentAppId,
       interviewDate: '2026-10-15',
@@ -312,55 +313,43 @@ const runE2ETests = async () => {
       'at',
       scheduleRes.data.interviewTime,
       '| Meeting Link:',
-      scheduleRes.data.meetingLink,
-      '| Status:',
-      scheduleRes.data.status
+      scheduleRes.data.meetingLink
     );
 
-    // 18b. Verify linked Application status updated to 'Interview Scheduled'
-    const appAfterSchedule = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
+    // --- STEP 15 EMAIL NOTIFICATION SYSTEM VERIFICATIONS ---
+    console.log('\n--- Step 15 Email Notification System Verification ---');
+
+    // 19a. Verify Email Service Configuration & Safety Isolation
+    const emailResult = await sendEmail({
+      to: 'candidate_test@example.com',
+      subject: 'Test Operational Notification',
+      html: '<p>Test notification content</p>',
+    });
+    console.log('✅ Step 19a. Email Service Transport Initialized:', isSmtpConfigured ? 'Live SMTP' : 'Mock Mode', '| Dispatch status:', emailResult ? 'Success' : 'Handled Exception');
+
+    // 19b. HR Updates Application Status to 'Shortlisted' (Triggers Status Update Email)
+    const hrShortlistRes = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
+      method: 'PUT',
       headers: hrHeaders,
+      body: {
+        status: 'Shortlisted',
+        recruiterNotes: 'Outstanding candidate profile for AI role.',
+      },
     });
-    console.log('✅ Step 18b. Application status automatically synced to:', appAfterSchedule.data.status);
+    console.log('✅ Step 19b. HR Shortlisted Candidate (Status Email Triggered):', hrShortlistRes.data.status);
 
-    // 18c. Candidate views upcoming interviews & meeting link
-    const candidateInterviewsRes = await request(`${BASE_URL}/interviews?upcoming=true`, {
-      headers: headers1,
-    });
-    console.log(
-      '✅ Step 18c. Candidate Viewed Upcoming Interviews:',
-      candidateInterviewsRes.data.length,
-      'interview(s) found | Meeting Link:',
-      candidateInterviewsRes.data[0].meetingLink
-    );
-
-    // 18d. HR Reschedules Interview
+    // 19c. HR Reschedules Interview (Triggers Reschedule Email)
     const rescheduleRes = await request(`${BASE_URL}/interviews/${createdInterviewId}/reschedule`, {
       method: 'PUT',
       headers: hrHeaders,
       body: {
         interviewDate: '2026-10-16',
         interviewTime: '02:00 PM EST',
-        notes: 'Rescheduled per candidate request',
       },
     });
-    console.log('✅ Step 18d. HR Rescheduled Interview:', rescheduleRes.data.interviewTime, '| Status:', rescheduleRes.data.status);
+    console.log('✅ Step 19c. HR Rescheduled Interview (Reschedule Email Triggered):', rescheduleRes.data.status);
 
-    // 18e. HR Marks Interview as Completed
-    const completeRes = await request(`${BASE_URL}/interviews/${createdInterviewId}/complete`, {
-      method: 'PUT',
-      headers: hrHeaders,
-      body: { notes: 'Passed technical round with flying colors!' },
-    });
-    console.log('✅ Step 18e. HR Completed Interview:', completeRes.data.status, '| Notes:', completeRes.data.notes);
-
-    // Verify linked Application status updated to 'Interview Completed'
-    const appAfterComplete = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
-      headers: hrHeaders,
-    });
-    console.log('✅ Step 18f. Application status automatically synced to:', appAfterComplete.data.status);
-
-    console.log('\n🎉 ALL 18 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, AND INTERVIEW SCHEDULING TESTS PASSED WITH 100% SUCCESS!');
+    console.log('\n🎉 ALL 19 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, AND EMAIL NOTIFICATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

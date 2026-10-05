@@ -1,6 +1,12 @@
 import Interview from '../models/Interview.js';
 import JobApplication from '../models/JobApplication.js';
+import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
+import {
+  sendInterviewScheduledEmail,
+  sendInterviewRescheduledEmail,
+  sendInterviewCancelledEmail,
+} from './emailService.js';
 
 /**
  * Interview Scheduling Business Logic & Database Service.
@@ -62,13 +68,32 @@ export const scheduleInterview = async (recruiterId, userRole, data) => {
   application.status = 'Interview Scheduled';
   await application.save();
 
-  return await Interview.findById(interview._id)
+  const populatedInterview = await Interview.findById(interview._id)
     .populate({
       path: 'applicationId',
       populate: { path: 'jobId' },
     })
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
+
+  // Trigger email notification to candidate (async, failure won't rollback DB)
+  const candidateUser = populatedInterview.candidateId;
+  if (candidateUser && candidateUser.email) {
+    sendInterviewScheduledEmail({
+      candidateEmail: candidateUser.email,
+      candidateName: candidateUser.name,
+      company: application.company,
+      jobTitle: application.jobTitle,
+      interviewDate: populatedInterview.interviewDate,
+      interviewTime: populatedInterview.interviewTime,
+      interviewType: populatedInterview.interviewType,
+      meetingLink: populatedInterview.meetingLink,
+      interviewerName: populatedInterview.interviewerName,
+      notes: populatedInterview.notes,
+    }).catch((err) => console.error('Interview schedule email error:', err.message));
+  }
+
+  return populatedInterview;
 };
 
 export const rescheduleInterview = async (interviewId, recruiterId, userRole, data) => {
@@ -100,13 +125,29 @@ export const rescheduleInterview = async (interviewId, recruiterId, userRole, da
     await application.save();
   }
 
-  return await Interview.findById(updatedInterview._id)
+  const populatedInterview = await Interview.findById(updatedInterview._id)
     .populate({
       path: 'applicationId',
       populate: { path: 'jobId' },
     })
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
+
+  const candidateUser = populatedInterview.candidateId;
+  if (candidateUser && candidateUser.email) {
+    sendInterviewRescheduledEmail({
+      candidateEmail: candidateUser.email,
+      candidateName: candidateUser.name,
+      company: application ? application.company : 'Company',
+      jobTitle: application ? application.jobTitle : 'Job Role',
+      interviewDate: populatedInterview.interviewDate,
+      interviewTime: populatedInterview.interviewTime,
+      meetingLink: populatedInterview.meetingLink,
+      notes: populatedInterview.notes,
+    }).catch((err) => console.error('Reschedule email error:', err.message));
+  }
+
+  return populatedInterview;
 };
 
 export const completeInterview = async (interviewId, recruiterId, userRole, data = {}) => {
@@ -153,13 +194,28 @@ export const cancelInterview = async (interviewId, recruiterId, userRole, data =
   interview.status = 'Cancelled';
   await interview.save();
 
-  return await Interview.findById(interview._id)
+  const populatedInterview = await Interview.findById(interview._id)
     .populate({
       path: 'applicationId',
       populate: { path: 'jobId' },
     })
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
+
+  const candidateUser = populatedInterview.candidateId;
+  const application = await JobApplication.findById(interview.applicationId);
+
+  if (candidateUser && candidateUser.email) {
+    sendInterviewCancelledEmail({
+      candidateEmail: candidateUser.email,
+      candidateName: candidateUser.name,
+      company: application ? application.company : 'Company',
+      jobTitle: application ? application.jobTitle : 'Job Role',
+      notes: populatedInterview.notes,
+    }).catch((err) => console.error('Cancel email error:', err.message));
+  }
+
+  return populatedInterview;
 };
 
 export const getInterviews = async (userId, userRole, queryParams = {}) => {
