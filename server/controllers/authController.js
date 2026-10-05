@@ -16,7 +16,7 @@ const generateToken = (userId) => {
 // @access  Public
 export const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -35,6 +35,12 @@ export const registerUser = async (req, res, next) => {
       });
     }
 
+    // Controlled role assignment: default to 'seeker', allow 'hr'. Never allow public registration as 'admin'.
+    let assignedRole = 'seeker';
+    if (role === 'hr') {
+      assignedRole = 'hr';
+    }
+
     // Hash password using bcryptjs
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -44,6 +50,7 @@ export const registerUser = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
+      role: assignedRole,
     });
 
     // Return clean JSON response without password
@@ -54,6 +61,7 @@ export const registerUser = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt,
       },
     });
@@ -100,6 +108,7 @@ export const loginUser = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role || 'seeker',
       },
     });
   } catch (error) {

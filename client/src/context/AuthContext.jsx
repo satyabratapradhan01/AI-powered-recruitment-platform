@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
       const { token, user: userData } = response.data;
       localStorage.setItem('token', token);
       setUser(userData);
-      return response.data;
+      return userData;
     } catch (err) {
       const message = err.response?.data?.message || 'Login failed';
       setError(message);
@@ -46,11 +46,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register handler
-  const register = async (name, email, password) => {
+  // Register handler (accepts optional role: 'seeker' or 'hr')
+  const register = async (name, email, password, role = 'seeker') => {
     setError(null);
     try {
-      const response = await registerApi({ name, email, password });
+      const response = await registerApi({ name, email, password, role });
       return response.data;
     } catch (err) {
       const message = err.response?.data?.message || 'Registration failed';

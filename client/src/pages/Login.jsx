@@ -6,46 +6,66 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Card, { CardContent } from '../components/ui/Card';
 import ErrorState from '../components/ui/ErrorState';
-import { Mail, Lock, Briefcase, Sparkles, LogIn } from 'lucide-react';
+import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
+import { Mail, Lock, Eye, EyeOff, Briefcase, LogIn, Sparkles } from 'lucide-react';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [validationError, setValidationError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
 
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = 'Enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    if (validationError) setValidationError('');
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setValidationError('');
-
-    const { email, password } = formData;
-
-    if (!email.trim() || !password) {
-      setValidationError('Please fill in all required fields.');
-      return;
-    }
+    if (!validate()) return;
 
     try {
       setIsSubmitting(true);
-      await login(email.trim(), password);
-      toast.success('Successfully logged in!');
-      navigate('/dashboard');
+      const userObj = await login(formData.email.trim(), formData.password);
+      toast.success(`Welcome back, ${userObj.name || 'User'}!`);
+
+      // Role-Based Routing
+      if (userObj?.role === 'hr') {
+        navigate('/dashboard');
+      } else if (userObj?.role === 'admin') {
+        navigate('/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
-      setValidationError(err.message || 'Invalid email or password.');
+      setErrors({ api: err.message || 'Invalid email or password' });
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +83,7 @@ const Login = () => {
             Talent<span className="text-indigo-600">AI</span>
           </h1>
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-            AI-Powered Recruitment Engine
+            AI-Powered Recruitment Portal
           </p>
         </div>
 
@@ -71,18 +91,15 @@ const Login = () => {
           <CardContent className="space-y-6 p-6 sm:p-8">
             <div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Sign in to your portal
+                Sign in to your account
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Enter your credentials to access your recruitment workspace.
+                Enter your registered credentials to access your dashboard.
               </p>
             </div>
 
-            {validationError && (
-              <ErrorState
-                title="Authentication Error"
-                message={validationError}
-              />
+            {errors.api && (
+              <ErrorState title="Sign In Failed" message={errors.api} />
             )}
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -90,23 +107,47 @@ const Login = () => {
                 label="Email Address *"
                 type="email"
                 name="email"
-                placeholder="candidate@company.com"
+                placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
+                error={errors.email}
                 leftIcon={Mail}
                 required
               />
 
-              <Input
-                label="Password *"
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                leftIcon={Lock}
-                required
-              />
+              <div className="space-y-1">
+                <Input
+                  label="Password *"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  leftIcon={Lock}
+                  rightIcon={() => (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-slate-400 hover:text-slate-600 transition"
+                      tabIndex={-1}
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
+                  required
+                />
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForgotModalOpen(true)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              </div>
 
               <Button
                 type="submit"
@@ -135,6 +176,12 @@ const Login = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={forgotModalOpen}
+        onClose={() => setForgotModalOpen(false)}
+      />
     </div>
   );
 };
