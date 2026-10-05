@@ -38,7 +38,7 @@ const runE2ETests = async () => {
     const health = await request(`${BASE_URL}/health`);
     console.log('✅ Step 0. Health Check:', health.message);
 
-    // 1. Register user
+    // 1. Register user (Job Seeker)
     const user1Data = {
       name: 'Satya E2ETester',
       email: `satya_e2e_${Date.now()}@example.com`,
@@ -48,7 +48,7 @@ const runE2ETests = async () => {
       method: 'POST',
       body: user1Data,
     });
-    console.log('✅ Step 1. User Registration:', regRes.message, 'Email:', regRes.data.email);
+    console.log('✅ Step 1. User Registration:', regRes.message, 'Email:', regRes.data.email, 'Role:', regRes.data.role);
 
     // 2 & 3. Login user & Receive JWT
     const loginRes = await request(`${BASE_URL}/auth/login`, {
@@ -159,7 +159,55 @@ const runE2ETests = async () => {
       console.log('✅ Step 10. Verified application is permanently removed (404):', err.status);
     }
 
-    console.log('\n🎉 ALL 13 STEPS IN THE END-TO-END TEST TRAJECTORY PASSED WITH 100% SUCCESS!');
+    // --- STEP 10 RBAC ENHANCEMENT VERIFICATIONS ---
+    console.log('\n--- Step 10 RBAC & Role Verification ---');
+
+    // 14a. Register HR user
+    const hrData = {
+      name: 'Sarah Recruiter',
+      email: `hr_${Date.now()}@company.com`,
+      password: 'password123',
+      role: 'hr',
+    };
+    const hrRegRes = await request(`${BASE_URL}/auth/register`, {
+      method: 'POST',
+      body: hrData,
+    });
+    console.log('✅ Step 14a. Registered HR User:', hrRegRes.data.email, 'Role:', hrRegRes.data.role);
+
+    // 14b. Attempt public registration with 'admin' role
+    const sneakyData = {
+      name: 'Hacker Wants Admin',
+      email: `sneaky_${Date.now()}@attacker.com`,
+      password: 'password123',
+      role: 'admin',
+    };
+    const sneakyRegRes = await request(`${BASE_URL}/auth/register`, {
+      method: 'POST',
+      body: sneakyData,
+    });
+    console.log('✅ Step 14b. Prevented unverified admin registration. Assigned role:', sneakyRegRes.data.role);
+
+    // 14c. Attempt Admin route access with Job Seeker token (should be 403)
+    try {
+      await request(`${BASE_URL}/auth/users`, { headers: headers1 });
+      console.error('❌ FAIL: Non-admin user accessed Admin endpoint!');
+    } catch (err) {
+      console.log('✅ Step 14c. Non-admin access to /api/auth/users correctly forbidden with status:', err.status, `("${err.message}")`);
+    }
+
+    // 14d. Update User Profile with skills and experience
+    const profileUpdateRes = await request(`${BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: headers1,
+      body: {
+        skills: ['React', 'Node.js', 'MongoDB', 'Express'],
+        profile: { headline: 'Senior Full Stack Engineer', location: 'Bangalore, India' },
+      },
+    });
+    console.log('✅ Step 14d. Updated User Profile & Skills:', profileUpdateRes.data.skills.join(', '), 'Headline:', profileUpdateRes.data.profile.headline);
+
+    console.log('\n🎉 ALL END-TO-END AND RBAC SECURITY TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

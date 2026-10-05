@@ -1,35 +1,43 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-// Protect routes middleware
-export const protect = async (req, res, next) => {
+/**
+ * Authentication Middleware: Verifies JWT token and verifies accountStatus is active.
+ */
+export const authenticate = async (req, res, next) => {
   let token;
 
-  // Read Authorization header expecting format: "Bearer <token>"
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
-      // Extract token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
       const decoded = jwt.verify(
         token,
         process.env.JWT_SECRET || 'super_secret_jwt_key_12345'
       );
 
-      // Fetch user from database using decoded ID (excluding password) and attach to req.user
-      req.user = await User.findById(decoded.id).select('-password');
+      const userId = decoded.userId || decoded.id;
+      const user = await User.findById(userId).select('-password');
 
-      if (!req.user) {
+      if (!user) {
         return res.status(401).json({
           status: 'fail',
           message: 'Not authorized, user no longer exists',
         });
       }
 
+      if (user.accountStatus && user.accountStatus !== 'active') {
+        return res.status(403).json({
+          status: 'fail',
+          message: `Access denied: Account is ${user.accountStatus}`,
+        });
+      }
+
+      req.user = user;
+      req.userRole = user.role;
       return next();
     } catch (error) {
       return res.status(401).json({
@@ -39,11 +47,42 @@ export const protect = async (req, res, next) => {
     }
   }
 
-  // Reject request if token is missing
   if (!token) {
     return res.status(401).json({
       status: 'fail',
       message: 'Not authorized, no token provided',
     });
   }
+};
+
+// Alias protect to preserve backward compatibility for existing code & tests
+export const protect = authenticate;
+
+/**
+ * Role-Based Access Control (RBAC) Middleware.
+ * Usage: authorize('admin'), authorize('hr', 'admin'), authorize('job_seeker')
+ */
+export const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'fail',
+        message: 'Not authorized, no user session found',
+      });
+    }
+
+    // Expand job_seeker <-> seeker equivalent alias matching
+    const expandedAllowedRoles = roles.flatMap((role) =>
+      role === 'job_seeker' || role === 'seeker' ? ['job_seeker', 'seeker'] : [role]
+    );
+
+    if (!expandedAllowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        status: 'fail',
+        message: `Forbidden: User role '${req.user.role}' is not authorized to access this resource`,
+      });
+    }
+
+    next();
+  };
 };

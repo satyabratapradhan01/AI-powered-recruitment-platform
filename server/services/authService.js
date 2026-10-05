@@ -4,40 +4,45 @@ import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
 
 /**
- * Authentication Business Logic & Database Service.
+ * Authentication & RBAC Business Logic Service.
  */
 
-const generateToken = (userId) => {
+export const generateToken = (user) => {
+  const normalizedRole = user.role === 'seeker' ? 'job_seeker' : user.role;
   return jwt.sign(
-    { id: userId },
+    {
+      id: user._id,
+      userId: user._id,
+      role: normalizedRole,
+    },
     process.env.JWT_SECRET || 'super_secret_jwt_key_12345',
     { expiresIn: '30d' }
   );
 };
 
 export const registerUser = async ({ name, email, password, role }) => {
-  // Check if user already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new AppError('User already exists with this email', 400);
   }
 
-  // Role assignment control: default 'seeker', allow 'hr'. Never allow public 'admin'.
-  let assignedRole = 'seeker';
+  // Strict RBAC Role Control: Default 'job_seeker', allow 'hr'. NEVER allow public 'admin'.
+  let assignedRole = 'job_seeker';
   if (role === 'hr') {
     assignedRole = 'hr';
+  } else if (role === 'seeker' || role === 'job_seeker') {
+    assignedRole = 'job_seeker';
   }
 
-  // Hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Create user
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
     role: assignedRole,
+    accountStatus: 'active',
   });
 
   return {
@@ -45,21 +50,23 @@ export const registerUser = async ({ name, email, password, role }) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    accountStatus: user.accountStatus,
     createdAt: user.createdAt,
   };
 };
 
 export const loginUser = async ({ email, password }) => {
-  // Find user by email
   const user = await User.findOne({ email });
 
-  // Compare password
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw new AppError('Invalid email or password', 401);
   }
 
-  // Generate JWT token
-  const token = generateToken(user._id);
+  if (user.accountStatus && user.accountStatus !== 'active') {
+    throw new AppError(`Access denied: Account is ${user.accountStatus}`, 403);
+  }
+
+  const token = generateToken(user);
 
   return {
     token,
@@ -67,7 +74,13 @@ export const loginUser = async ({ email, password }) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role || 'seeker',
+      role: user.role || 'job_seeker',
+      accountStatus: user.accountStatus || 'active',
+      profile: user.profile,
+      skills: user.skills,
+      education: user.education,
+      experience: user.experience,
+      resume: user.resume,
     },
   };
 };
@@ -78,4 +91,56 @@ export const getUserById = async (userId) => {
     throw new AppError('User not found', 404);
   }
   return user;
+};
+
+export const updateUserProfile = async (userId, updateData) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  // Allow updating user profile fields
+  if (updateData.name !== undefined) user.name = updateData.name;
+  if (updateData.profile !== undefined) {
+    user.profile = { ...user.profile, ...updateData.profile };
+  }
+  if (updateData.skills !== undefined) user.skills = updateData.skills;
+  if (updateData.education !== undefined) user.education = updateData.education;
+  if (updateData.experience !== undefined) user.experience = updateData.experience;
+  if (updateData.resume !== undefined) {
+    user.resume = { ...user.resume, ...updateData.resume };
+  }
+
+  const updatedUser = await user.save();
+  const userObj = updatedUser.toObject();
+  delete userObj.password;
+  return userObj;
+};
+
+// Admin Service Operations
+export const getAllUsers = async () => {
+  const users = await User.find().select('-password').sort({ createdAt: -1 });
+  return users;
+};
+
+export const updateUserStatus = async (targetUserId, accountStatus) => {
+  const allowedStatuses = ['active', 'deactivated', 'suspended'];
+  if (!allowedStatuses.includes(accountStatus)) {
+    throw new AppError(
+      `Invalid account status. Allowed values: ${allowedStatuses.join(', ')}`,
+      400
+    );
+  }
+
+  const user = await User.findById(targetUserId);
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  user.accountStatus = accountStatus;
+  await user.save();
+
+  const userObj = user.toObject();
+  delete userObj.password;
+  return userObj;
 };

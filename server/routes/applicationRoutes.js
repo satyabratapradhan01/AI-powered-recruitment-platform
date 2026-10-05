@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
+import { authenticate, authorize } from '../middleware/authMiddleware.js';
 import {
   createApplication,
   getApplications,
@@ -14,20 +14,28 @@ import {
 
 const router = express.Router();
 
-// Apply JWT auth protection middleware to all application routes
-router.use(protect);
+// Apply JWT authentication protection to all application routes
+router.use(authenticate);
 
 // GET /api/applications & POST /api/applications
 router
   .route('/')
-  .post(validateApplicationCreate, createApplication)
-  .get(getApplications);
+  .post(
+    authorize('job_seeker', 'seeker', 'admin'),
+    validateApplicationCreate,
+    createApplication
+  )
+  .get(authorize('job_seeker', 'seeker', 'admin'), getApplications);
 
 // GET /api/applications/:id, PUT /api/applications/:id, DELETE /api/applications/:id
 router
   .route('/:id')
-  .get(getApplicationById)
-  .put(validateApplicationUpdate, updateApplication)
-  .delete(deleteApplication);
+  .get(authorize('job_seeker', 'seeker', 'admin'), getApplicationById)
+  .put(
+    authorize('job_seeker', 'seeker', 'admin'),
+    validateApplicationUpdate,
+    updateApplication
+  )
+  .delete(authorize('job_seeker', 'seeker', 'admin'), deleteApplication);
 
 export default router;
