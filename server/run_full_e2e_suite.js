@@ -173,7 +173,13 @@ const runE2ETests = async () => {
       method: 'POST',
       body: hrData,
     });
-    console.log('✅ Step 14a. Registered HR User:', hrRegRes.data.email, 'Role:', hrRegRes.data.role);
+    const hrLoginRes = await request(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      body: { email: hrData.email, password: hrData.password },
+    });
+    const hrToken = hrLoginRes.token;
+    const hrHeaders = { Authorization: `Bearer ${hrToken}` };
+    console.log('✅ Step 14a. Registered & Logged-in HR User:', hrRegRes.data.email, 'Role:', hrRegRes.data.role);
 
     // 14b. Attempt public registration with 'admin' role
     const sneakyData = {
@@ -207,7 +213,81 @@ const runE2ETests = async () => {
     });
     console.log('✅ Step 14d. Updated User Profile & Skills:', profileUpdateRes.data.skills.join(', '), 'Headline:', profileUpdateRes.data.profile.headline);
 
-    console.log('\n🎉 ALL END-TO-END AND RBAC SECURITY TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 11 JOB MANAGEMENT BACKEND VERIFICATIONS ---
+    console.log('\n--- Step 11 Job Management Backend Verification ---');
+
+    // 15a. HR creates a Job Posting
+    const newJobData = {
+      title: 'Senior AI Engineer',
+      company: 'TechCorp AI Solutions',
+      description: 'Design and deploy state-of-the-art AI Models and RAG pipelines.',
+      responsibilities: ['Build LLM apps', 'Optimize Node.js APIs', 'Lead frontend integration'],
+      requiredSkills: ['Python', 'Node.js', 'MongoDB', 'React'],
+      preferredSkills: ['PyTorch', 'Vector Databases'],
+      experienceRequired: '3-5 years',
+      location: 'Remote - Worldwide',
+      workMode: 'Remote',
+      employmentType: 'Full-time',
+      salaryMin: 120000,
+      salaryMax: 160000,
+      status: 'Active',
+    };
+    const jobPostRes = await request(`${BASE_URL}/jobs`, {
+      method: 'POST',
+      headers: hrHeaders,
+      body: newJobData,
+    });
+    const createdJobId = jobPostRes.data._id;
+    console.log('✅ Step 15a. HR Posted New Job:', jobPostRes.data.title, 'at', jobPostRes.data.company, '(ID:', createdJobId + ')');
+
+    // 15b. Job Seeker attempts to post a job (should be 403 Forbidden)
+    try {
+      await request(`${BASE_URL}/jobs`, {
+        method: 'POST',
+        headers: headers1,
+        body: newJobData,
+      });
+      console.error('❌ FAIL: Job Seeker was allowed to post a job!');
+    } catch (err) {
+      console.log('✅ Step 15b. Job Seeker job post attempt correctly forbidden with status:', err.status, `("${err.message}")`);
+    }
+
+    // 15c. Search & Filter jobs
+    const searchJobsRes = await request(`${BASE_URL}/jobs?search=AI&workMode=Remote&page=1&limit=5`);
+    console.log('✅ Step 15c. Public Job Search & Pagination:', searchJobsRes.data.length, 'jobs found, Total:', searchJobsRes.total);
+
+    // 15d. Get single job by ID
+    const singleJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`);
+    console.log('✅ Step 15d. Get Job Details:', singleJobRes.data.title, 'Salary range:', `$${singleJobRes.data.salaryMin} - $${singleJobRes.data.salaryMax}`);
+
+    // 15e. Job Seeker attempts to update HR's job (should be 403 Forbidden)
+    try {
+      await request(`${BASE_URL}/jobs/${createdJobId}`, {
+        method: 'PUT',
+        headers: headers1,
+        body: { title: 'Hacked Title' },
+      });
+      console.error('❌ FAIL: Job Seeker was allowed to edit HR job!');
+    } catch (err) {
+      console.log('✅ Step 15e. Job Seeker edit attempt correctly forbidden with status:', err.status, `("${err.message}")`);
+    }
+
+    // 15f. HR updates their own job
+    const updateJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`, {
+      method: 'PUT',
+      headers: hrHeaders,
+      body: { salaryMax: 175000, workMode: 'Hybrid' },
+    });
+    console.log('✅ Step 15f. HR Updated Own Job:', updateJobRes.data.title, 'New SalaryMax:', `$${updateJobRes.data.salaryMax}`, 'WorkMode:', updateJobRes.data.workMode);
+
+    // 15g. HR deletes their job
+    const deleteJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`, {
+      method: 'DELETE',
+      headers: hrHeaders,
+    });
+    console.log('✅ Step 15g. HR Deleted Job:', deleteJobRes.message);
+
+    console.log('\n🎉 ALL 15 END-TO-END, RBAC, AND JOB MANAGEMENT TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

@@ -38,3 +38,39 @@ export const validateApplicationUpdate = (req, res, next) => {
   }
   next();
 };
+
+export const validateJobCreate = (req, res, next) => {
+  const { title, company, description } = req.body;
+  if (!title || !company || !description) {
+    return next(
+      new AppError('Please provide job title, company, and description', 400)
+    );
+  }
+  next();
+};
+
+export const validateJobUpdate = (req, res, next) => {
+  const { status, workMode, employmentType } = req.body;
+
+  if (status && !['Active', 'Draft', 'Closed'].includes(status)) {
+    return next(new AppError('Invalid status. Allowed values: Active, Draft, Closed', 400));
+  }
+
+  if (workMode && !['On-site', 'Hybrid', 'Remote'].includes(workMode)) {
+    return next(new AppError('Invalid workMode. Allowed values: On-site, Hybrid, Remote', 400));
+  }
+
+  if (
+    employmentType &&
+    !['Full-time', 'Part-time', 'Contract', 'Internship'].includes(employmentType)
+  ) {
+    return next(
+      new AppError(
+        'Invalid employmentType. Allowed values: Full-time, Part-time, Contract, Internship',
+        400
+      )
+    );
+  }
+
+  next();
+};
