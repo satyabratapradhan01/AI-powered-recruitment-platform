@@ -1,18 +1,31 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, PlusCircle, X } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Search,
+  Briefcase,
+  Calendar,
+  User,
+  Bell,
+  PlusCircle,
+  X,
+  Sparkles,
+} from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Find Jobs', path: '/jobs', icon: Search },
     { label: 'Applications', path: '/applications', icon: Briefcase },
-    { label: 'Add Application', path: '/applications/new', icon: PlusCircle },
+    { label: 'Interviews', path: '/interviews', icon: Calendar },
+    { label: 'Profile', path: '/profile', icon: User },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
   ];
 
   const linkClasses = ({ isActive }) =>
     `flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-150 ${
       isActive
-        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
+        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 font-bold'
         : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
     }`;
 
@@ -31,10 +44,10 @@ const Sidebar = ({ isOpen, onClose }) => {
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div>
+        <div className="space-y-6">
           {/* Mobile Sidebar Close Header */}
-          <div className="flex items-center justify-between pb-4 md:hidden border-b border-slate-100 mb-4">
-            <span className="font-bold text-sm text-slate-800">Navigation</span>
+          <div className="flex items-center justify-between pb-3 md:hidden border-b border-slate-100">
+            <span className="font-bold text-sm text-slate-800">Job Seeker Portal</span>
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-slate-600"
@@ -45,7 +58,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           <div className="space-y-1">
             <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Main Menu
+              Candidate Navigation
             </p>
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -65,10 +78,13 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Sidebar Footer Info Card */}
-        <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1">
-          <p className="text-xs font-bold text-indigo-950">Recruitment Hub</p>
+        <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-indigo-950">AI ATS Engine</p>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          </div>
           <p className="text-[11px] text-indigo-700/80 leading-snug">
-            Streamlined ATS & Job Application Manager
+            Resume matched against live jobs with 94% accuracy rating.
           </p>
         </div>
       </aside>
