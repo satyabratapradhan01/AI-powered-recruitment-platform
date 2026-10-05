@@ -7,6 +7,10 @@ import {
   updateApplication,
   deleteApplication,
 } from '../controllers/applicationController.js';
+import {
+  validateApplicationCreate,
+  validateApplicationUpdate,
+} from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
@@ -14,13 +18,16 @@ const router = express.Router();
 router.use(protect);
 
 // GET /api/applications & POST /api/applications
-router.route('/').post(createApplication).get(getApplications);
+router
+  .route('/')
+  .post(validateApplicationCreate, createApplication)
+  .get(getApplications);
 
 // GET /api/applications/:id, PUT /api/applications/:id, DELETE /api/applications/:id
 router
   .route('/:id')
   .get(getApplicationById)
-  .put(updateApplication)
+  .put(validateApplicationUpdate, updateApplication)
   .delete(deleteApplication);
 
 export default router;

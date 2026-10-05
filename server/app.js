@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
+import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
 
@@ -24,28 +25,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 
 // Handle Unknown Routes (404 Not Found)
-app.use((req, res, next) => {
-  const error = new Error(`Route Not Found - ${req.originalUrl}`);
-  res.status(404);
-  next(error);
-});
+app.use(notFoundHandler);
 
 // Global Error Handling Middleware
-app.use((err, req, res, next) => {
-  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  let message = err.message || 'Internal Server Error';
-
-  // Format Mongoose invalid ObjectId error as 404
-  if (err.name === 'CastError' && err.kind === 'ObjectId') {
-    statusCode = 404;
-    message = 'Resource not found';
-  }
-
-  res.status(statusCode).json({
-    status: 'error',
-    message,
-    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-  });
-});
+app.use(errorHandler);
 
 export default app;
