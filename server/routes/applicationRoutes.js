@@ -5,6 +5,7 @@ import {
   getApplications,
   getApplicationById,
   updateApplication,
+  withdrawApplication,
   deleteApplication,
 } from '../controllers/applicationController.js';
 import {
@@ -25,17 +26,22 @@ router
     validateApplicationCreate,
     createApplication
   )
-  .get(authorize('job_seeker', 'seeker', 'admin'), getApplications);
+  .get(authorize('job_seeker', 'seeker', 'hr', 'admin'), getApplications);
+
+// Candidate withdraw application route
+router
+  .route('/:id/withdraw')
+  .put(authorize('job_seeker', 'seeker', 'admin'), withdrawApplication);
 
 // GET /api/applications/:id, PUT /api/applications/:id, DELETE /api/applications/:id
 router
   .route('/:id')
-  .get(authorize('job_seeker', 'seeker', 'admin'), getApplicationById)
+  .get(authorize('job_seeker', 'seeker', 'hr', 'admin'), getApplicationById)
   .put(
-    authorize('job_seeker', 'seeker', 'admin'),
+    authorize('job_seeker', 'seeker', 'hr', 'admin'),
     validateApplicationUpdate,
     updateApplication
   )
-  .delete(authorize('job_seeker', 'seeker', 'admin'), deleteApplication);
+  .delete(authorize('job_seeker', 'seeker', 'hr', 'admin'), deleteApplication);
 
 export default router;

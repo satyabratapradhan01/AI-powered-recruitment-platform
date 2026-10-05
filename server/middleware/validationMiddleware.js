@@ -21,16 +21,30 @@ export const validateLogin = (req, res, next) => {
 };
 
 export const validateApplicationCreate = (req, res, next) => {
-  const { company, jobTitle } = req.body;
-  if (!company || !jobTitle) {
-    return next(new AppError('Please provide both company and jobTitle', 400));
+  const { jobId, company, jobTitle } = req.body;
+  if (!jobId && (!company || !jobTitle)) {
+    return next(
+      new AppError('Please provide jobId or both company and jobTitle', 400)
+    );
   }
   next();
 };
 
 export const validateApplicationUpdate = (req, res, next) => {
   const { status } = req.body;
-  const allowedStatuses = ['Applied', 'Interview', 'Offer', 'Rejected'];
+  const allowedStatuses = [
+    'Applied',
+    'Under Review',
+    'Shortlisted',
+    'Interview Scheduled',
+    'Interview Completed',
+    'Selected',
+    'Rejected',
+    'Withdrawn',
+    'Interview',
+    'Offer',
+  ];
+
   if (status && !allowedStatuses.includes(status)) {
     return next(
       new AppError(`Invalid status. Allowed values are: ${allowedStatuses.join(', ')}`, 400)

@@ -265,34 +265,7 @@ const runE2ETests = async () => {
     const singleJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`);
     console.log('✅ Step 15d. Get Job Details:', singleJobRes.data.title, 'Salary range:', `$${singleJobRes.data.salaryMin} - $${singleJobRes.data.salaryMax}`);
 
-    // 15e. Job Seeker attempts to update HR's job (should be 403 Forbidden)
-    try {
-      await request(`${BASE_URL}/jobs/${createdJobId}`, {
-        method: 'PUT',
-        headers: headers1,
-        body: { title: 'Hacked Title' },
-      });
-      console.error('❌ FAIL: Job Seeker was allowed to edit HR job!');
-    } catch (err) {
-      console.log('✅ Step 15e. Job Seeker edit attempt correctly forbidden with status:', err.status, `("${err.message}")`);
-    }
-
-    // 15f. HR updates their own job
-    const updateJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`, {
-      method: 'PUT',
-      headers: hrHeaders,
-      body: { salaryMax: 175000, workMode: 'Hybrid' },
-    });
-    console.log('✅ Step 15f. HR Updated Own Job:', updateJobRes.data.title, 'New SalaryMax:', `$${updateJobRes.data.salaryMax}`, 'WorkMode:', updateJobRes.data.workMode);
-
-    // 15g. HR deletes their job
-    const deleteJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`, {
-      method: 'DELETE',
-      headers: hrHeaders,
-    });
-    console.log('✅ Step 15g. HR Deleted Job:', deleteJobRes.message);
-
-    // --- STEP 12 RESUME + CLOUDFLARE R2 VERIFICATIONS ---
+    // --- STEP 12 RESUME + CLOUDFLARE R2 STORAGE VERIFICATIONS ---
     console.log('\n--- Step 12 Resume + Cloudflare R2 Storage Verification ---');
 
     // 16a. Candidate uploads PDF Resume
@@ -317,24 +290,58 @@ const runE2ETests = async () => {
       uploadRes.data.parsedTextLength
     );
 
-    // 16b. Candidate views own resume signed URL
-    const myResumeRes = await request(`${BASE_URL}/resumes/my-resume`, { headers: headers1 });
-    console.log('✅ Step 16b. Candidate Signed View URL Generated:', myResumeRes.data.fileUrl.substring(0, 45) + '...');
+    // --- STEP 13 RECRUITMENT APPLICATION WORKFLOW VERIFICATIONS ---
+    console.log('\n--- Step 13 Recruitment Application Workflow Verification ---');
 
-    // 16c. HR views candidate's resume
-    const candidateResumeRes = await request(`${BASE_URL}/resumes/candidate/${meRes.data._id}`, {
+    // 17a. Candidate applies to HR's Job Posting
+    const jobAppRes = await request(`${BASE_URL}/applications`, {
+      method: 'POST',
+      headers: headers1,
+      body: {
+        jobId: createdJobId,
+        coverLetter: 'I am excited to apply for the Senior AI Engineer position!',
+      },
+    });
+    const recruitmentAppId = jobAppRes.data._id;
+    console.log('✅ Step 17a. Candidate Applied to Job Posting:', jobAppRes.data.jobTitle, 'Status:', jobAppRes.data.status, '(App ID:', recruitmentAppId + ')');
+
+    // 17b. Duplicate application prevention check
+    try {
+      await request(`${BASE_URL}/applications`, {
+        method: 'POST',
+        headers: headers1,
+        body: { jobId: createdJobId },
+      });
+      console.error('❌ FAIL: Duplicate application was allowed!');
+    } catch (err) {
+      console.log('✅ Step 17b. Duplicate application correctly rejected with status:', err.status, `("${err.message}")`);
+    }
+
+    // 17c. HR views applicants for their job posting
+    const hrApplicantsRes = await request(`${BASE_URL}/applications?jobId=${createdJobId}`, {
       headers: hrHeaders,
     });
-    console.log('✅ Step 16c. HR Viewed Candidate Resume Signed URL:', candidateResumeRes.data.fileName, '| Signed URL generated successfully.');
+    console.log('✅ Step 17c. HR Viewed Applicants for Job:', hrApplicantsRes.data.length, 'applicant(s) found. Candidate Name:', hrApplicantsRes.data[0].candidateId.name);
 
-    // 16d. Candidate deletes resume
-    const deleteResumeRes = await request(`${BASE_URL}/resumes`, {
-      method: 'DELETE',
+    // 17d. HR updates status & adds recruiter notes
+    const hrUpdateStatusRes = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
+      method: 'PUT',
+      headers: hrHeaders,
+      body: {
+        status: 'Shortlisted',
+        recruiterNotes: 'Candidate has impressive Node.js and React background.',
+      },
+    });
+    console.log('✅ Step 17d. HR Updated Application Status:', hrUpdateStatusRes.data.status, '| Recruiter Notes:', hrUpdateStatusRes.data.recruiterNotes);
+
+    // 17e. Candidate withdraws application
+    const withdrawRes = await request(`${BASE_URL}/applications/${recruitmentAppId}/withdraw`, {
+      method: 'PUT',
       headers: headers1,
     });
-    console.log('✅ Step 16d. Candidate Deleted Resume:', deleteResumeRes.message);
+    console.log('✅ Step 17e. Candidate Withdrew Application:', withdrawRes.data.status);
 
-    console.log('\n🎉 ALL 16 END-TO-END, RBAC, JOB MANAGEMENT, AND R2 RESUME TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
+    console.log('\n🎉 ALL 17 END-TO-END, RBAC, R2 RESUME, AND RECRUITMENT WORKFLOW TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

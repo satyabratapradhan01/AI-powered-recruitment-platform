@@ -1,64 +1,280 @@
 import JobApplication from '../models/JobApplication.js';
+import Job from '../models/Job.js';
+import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
 
 /**
- * Job Application Business Logic & Database Service.
+ * Recruitment Application Business Logic & Database Service.
  */
 
 export const createApplication = async (userId, data) => {
-  const { company, jobTitle, location, jobUrl, status, appliedDate } = data;
+  const { jobId, company, jobTitle, location, jobUrl, coverLetter, resume, status, appliedDate } = data;
 
+  // 1. If applying for a platform Job Posting (jobId provided)
+  if (jobId) {
+    const job = await Job.findById(jobId);
+    if (!job) {
+      throw new AppError('Job posting not found', 404);
+    }
+
+    if (job.status === 'Closed') {
+      throw new AppError('This job posting is closed and no longer accepting applications', 400);
+    }
+
+    // Prevent Duplicate Applications for the same job posting
+    const existingApp = await JobApplication.findOne({
+      jobId,
+      $or: [{ candidateId: userId }, { userId }],
+    });
+
+    if (existingApp) {
+      throw new AppError('You have already applied for this job posting', 400);
+    }
+
+    const candidateUser = await User.findById(userId);
+
+    // Use passed resume or pull candidate's default uploaded resume metadata
+    let resumeData = resume;
+    if (!resumeData && candidateUser && candidateUser.resume && candidateUser.resume.fileKey) {
+      resumeData = {
+        fileUrl: candidateUser.resume.fileUrl,
+        fileName: candidateUser.resume.fileName,
+        fileKey: candidateUser.resume.fileKey,
+        parsedText: candidateUser.resume.parsedText,
+      };
+    }
+
+    const application = await JobApplication.create({
+      jobId,
+      candidateId: userId,
+      userId,
+      company: job.company,
+      jobTitle: job.title,
+      location: job.location || location || '',
+      resume: resumeData || {},
+      coverLetter: coverLetter || '',
+      status: 'Applied',
+      appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
+      appliedAt: new Date(),
+    });
+
+    return application;
+  }
+
+  // 2. Legacy custom tracker application entry (no jobId provided)
   const application = await JobApplication.create({
+    candidateId: userId,
     userId,
     company,
     jobTitle,
-    location,
-    jobUrl,
+    location: location || '',
+    jobUrl: jobUrl || '',
+    coverLetter: coverLetter || '',
+    resume: resume || {},
     status: status || 'Applied',
-    appliedDate: appliedDate || Date.now(),
+    appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
+    appliedAt: new Date(),
   });
 
   return application;
 };
 
-export const getUserApplications = async (userId) => {
-  const applications = await JobApplication.find({ userId }).sort({
-    createdAt: -1,
-  });
-  return applications;
+export const getApplications = async (userId, userRole, queryParams = {}) => {
+  const { jobId, status } = queryParams;
+
+  // HR Applications View: List candidates who applied to HR's posted jobs
+  if (userRole === 'hr') {
+    if (jobId) {
+      const job = await Job.findById(jobId);
+      if (!job || job.postedBy.toString() !== userId.toString()) {
+        throw new AppError('Forbidden: You can only view applicants for your own job postings', 403);
+      }
+      const query = { jobId };
+      if (status) query.status = status;
+      return await JobApplication.find(query)
+        .populate('jobId')
+        .populate('candidateId', 'name email profile skills education experience resume accountStatus')
+        .sort({ createdAt: -1 });
+    }
+
+    // Get all jobs posted by this HR
+    const hrJobs = await Job.find({ postedBy: userId }).select('_id');
+    const hrJobIds = hrJobs.map((j) => j._id);
+
+    const query = { jobId: { $in: hrJobIds } };
+    if (status) query.status = status;
+
+    return await JobApplication.find(query)
+      .populate('jobId')
+      .populate('candidateId', 'name email profile skills education experience resume accountStatus')
+      .sort({ createdAt: -1 });
+  }
+
+  // Admin View: All applications
+  if (userRole === 'admin') {
+    const query = {};
+    if (jobId) query.jobId = jobId;
+    if (status) query.status = status;
+
+    return await JobApplication.find(query)
+      .populate('jobId')
+      .populate('candidateId', 'name email profile skills education experience resume accountStatus')
+      .sort({ createdAt: -1 });
+  }
+
+  // Candidate / Job Seeker View: Own applications
+  const query = {
+    $or: [{ candidateId: userId }, { userId }],
+  };
+  if (status) query.status = status;
+
+  return await JobApplication.find(query)
+    .populate('jobId')
+    .sort({ createdAt: -1 });
 };
 
-export const getApplicationById = async (id, userId) => {
-  const application = await JobApplication.findOne({ _id: id, userId });
+export const getApplicationById = async (id, userId, userRole) => {
+  const application = await JobApplication.findById(id)
+    .populate('jobId')
+    .populate('candidateId', 'name email profile skills education experience resume accountStatus');
+
   if (!application) {
     throw new AppError('Job application not found', 404);
   }
+
+  const isCandidateOwner =
+    (application.candidateId && application.candidateId._id.toString() === userId.toString()) ||
+    (application.userId && application.userId.toString() === userId.toString());
+
+  let isHROwner = false;
+  if (application.jobId && application.jobId.postedBy) {
+    const posterId = application.jobId.postedBy._id
+      ? application.jobId.postedBy._id.toString()
+      : application.jobId.postedBy.toString();
+    isHROwner = posterId === userId.toString();
+  }
+
+  const isAdmin = userRole === 'admin';
+
+  if (!isCandidateOwner && !isHROwner && !isAdmin) {
+    throw new AppError('Forbidden: You do not have permission to view this application', 403);
+  }
+
   return application;
 };
 
-export const updateApplication = async (id, userId, data) => {
-  const { company, jobTitle, location, jobUrl, status, appliedDate } = data;
+export const updateApplication = async (id, userId, userRole, updateData) => {
+  const application = await JobApplication.findById(id).populate('jobId');
 
-  const application = await JobApplication.findOne({ _id: id, userId });
   if (!application) {
     throw new AppError('Job application not found', 404);
+  }
+
+  const isCandidateOwner =
+    (application.candidateId && application.candidateId.toString() === userId.toString()) ||
+    (application.userId && application.userId.toString() === userId.toString());
+
+  let isHROwner = false;
+  if (application.jobId && application.jobId.postedBy) {
+    isHROwner = application.jobId.postedBy.toString() === userId.toString();
+  }
+
+  const isAdmin = userRole === 'admin';
+
+  if (!isCandidateOwner && !isHROwner && !isAdmin) {
+    throw new AppError('Forbidden: Access denied to update this application', 403);
+  }
+
+  const { status, recruiterNotes, company, jobTitle, location, jobUrl, coverLetter } = updateData;
+
+  // Status transition validation
+  if (status) {
+    const allowedStatuses = [
+      'Applied',
+      'Under Review',
+      'Shortlisted',
+      'Interview Scheduled',
+      'Interview Completed',
+      'Selected',
+      'Rejected',
+      'Withdrawn',
+      'Interview',
+      'Offer',
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      throw new AppError(
+        `Invalid status. Allowed values: ${allowedStatuses.join(', ')}`,
+        400
+      );
+    }
+
+    // For recruitment platform applications (where jobId is present), candidate can only set status to 'Withdrawn'
+    if (isCandidateOwner && !isHROwner && !isAdmin) {
+      if (application.jobId && status !== 'Withdrawn') {
+        throw new AppError('Candidates are only allowed to withdraw platform job applications', 403);
+      }
+    }
+
+    application.status = status;
+  }
+
+  // Recruiter notes update (HR or Admin only)
+  if (recruiterNotes !== undefined) {
+    if (!isHROwner && !isAdmin) {
+      throw new AppError('Only recruiters or admins can add recruiter notes', 403);
+    }
+    application.recruiterNotes = recruiterNotes;
   }
 
   if (company !== undefined) application.company = company;
   if (jobTitle !== undefined) application.jobTitle = jobTitle;
   if (location !== undefined) application.location = location;
   if (jobUrl !== undefined) application.jobUrl = jobUrl;
-  if (status !== undefined) application.status = status;
-  if (appliedDate !== undefined) application.appliedDate = appliedDate;
+  if (coverLetter !== undefined) application.coverLetter = coverLetter;
 
   const updatedApplication = await application.save();
   return updatedApplication;
 };
 
-export const deleteApplication = async (id, userId) => {
-  const application = await JobApplication.findOneAndDelete({ _id: id, userId });
+export const withdrawApplication = async (id, userId) => {
+  const application = await JobApplication.findOne({
+    _id: id,
+    $or: [{ candidateId: userId }, { userId }],
+  });
+
   if (!application) {
     throw new AppError('Job application not found', 404);
   }
+
+  application.status = 'Withdrawn';
+  await application.save();
+
   return application;
+};
+
+export const deleteApplication = async (id, userId, userRole) => {
+  const application = await JobApplication.findById(id).populate('jobId');
+
+  if (!application) {
+    throw new AppError('Job application not found', 404);
+  }
+
+  const isCandidateOwner =
+    (application.candidateId && application.candidateId.toString() === userId.toString()) ||
+    (application.userId && application.userId.toString() === userId.toString());
+
+  let isHROwner = false;
+  if (application.jobId && application.jobId.postedBy) {
+    isHROwner = application.jobId.postedBy.toString() === userId.toString();
+  }
+
+  const isAdmin = userRole === 'admin';
+
+  if (!isCandidateOwner && !isHROwner && !isAdmin) {
+    throw new AppError('Forbidden: Access denied to delete this application', 403);
+  }
+
+  await application.deleteOne();
+  return { _id: id };
 };

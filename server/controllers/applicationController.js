@@ -2,19 +2,23 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { successResponse } from '../utils/apiResponse.js';
 import * as applicationService from '../services/applicationService.js';
 
-// @desc    Create a new job application
+// @desc    Submit candidate job application or custom application entry
 // @route   POST /api/applications
-// @access  Private (Protected by JWT)
+// @access  Private (Candidate / Job Seeker)
 export const createApplication = asyncHandler(async (req, res) => {
   const application = await applicationService.createApplication(req.user._id, req.body);
-  return successResponse(res, 201, 'Job application created successfully', application);
+  return successResponse(res, 201, 'Application submitted successfully', application);
 });
 
-// @desc    Get all job applications for logged-in user
+// @desc    Get job applications (filtered by role & query params)
 // @route   GET /api/applications
-// @access  Private (Protected by JWT)
+// @access  Private (Candidate / HR / Admin)
 export const getApplications = asyncHandler(async (req, res) => {
-  const applications = await applicationService.getUserApplications(req.user._id);
+  const applications = await applicationService.getApplications(
+    req.user._id,
+    req.user.role,
+    req.query
+  );
   return res.status(200).json({
     status: 'success',
     count: applications.length,
@@ -22,40 +26,62 @@ export const getApplications = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get single job application by ID (belonging to logged-in user)
+// @desc    Get single application by ID
 // @route   GET /api/applications/:id
-// @access  Private (Protected by JWT)
+// @access  Private (Candidate Owner / HR Owner / Admin)
 export const getApplicationById = asyncHandler(async (req, res) => {
-  const application = await applicationService.getApplicationById(req.params.id, req.user._id);
+  const application = await applicationService.getApplicationById(
+    req.params.id,
+    req.user._id,
+    req.user.role
+  );
   return successResponse(res, 200, '', application);
 });
 
-// @desc    Update a job application by ID (belonging to logged-in user)
+// @desc    Update application status, recruiter notes, or details
 // @route   PUT /api/applications/:id
-// @access  Private (Protected by JWT)
+// @access  Private (Candidate / HR / Admin)
 export const updateApplication = asyncHandler(async (req, res) => {
   const updatedApplication = await applicationService.updateApplication(
     req.params.id,
     req.user._id,
+    req.user.role,
     req.body
   );
   return successResponse(
     res,
     200,
-    'Job application updated successfully',
+    'Application updated successfully',
     updatedApplication
   );
 });
 
-// @desc    Delete a job application by ID (belonging to logged-in user)
-// @route   DELETE /api/applications/:id
-// @access  Private (Protected by JWT)
-export const deleteApplication = asyncHandler(async (req, res) => {
-  const deletedApplication = await applicationService.deleteApplication(
+// @desc    Candidate withdraw application
+// @route   PUT /api/applications/:id/withdraw
+// @access  Private (Candidate)
+export const withdrawApplication = asyncHandler(async (req, res) => {
+  const application = await applicationService.withdrawApplication(
     req.params.id,
     req.user._id
   );
-  return successResponse(res, 200, 'Job application deleted successfully', {
+  return successResponse(
+    res,
+    200,
+    'Application withdrawn successfully',
+    application
+  );
+});
+
+// @desc    Delete application
+// @route   DELETE /api/applications/:id
+// @access  Private (Candidate Owner / HR Owner / Admin)
+export const deleteApplication = asyncHandler(async (req, res) => {
+  const deletedApplication = await applicationService.deleteApplication(
+    req.params.id,
+    req.user._id,
+    req.user.role
+  );
+  return successResponse(res, 200, 'Application deleted successfully', {
     _id: deletedApplication._id,
   });
 });
