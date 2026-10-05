@@ -1,5 +1,7 @@
 import Job from '../models/Job.js';
+import User from '../models/User.js';
 import AppError from '../utils/AppError.js';
+import { getJobRecommendations } from './aiService.js';
 
 /**
  * Job Management Business Logic & Database Service.
@@ -211,4 +213,22 @@ export const deleteJob = async (jobId, userId, userRole) => {
 
   await job.deleteOne();
   return { _id: jobId };
+};
+
+export const getRecommendedJobs = async (currentUser) => {
+  if (!currentUser) {
+    throw new AppError('Authentication required to view recommended jobs', 401);
+  }
+
+  const candidateUser = await User.findById(currentUser._id);
+  if (!candidateUser) {
+    throw new AppError('User profile not found', 404);
+  }
+
+  const activeJobs = await Job.find({ status: 'Active' })
+    .populate('postedBy', 'name email profile.companyName')
+    .sort({ createdAt: -1 });
+
+  const recommendations = await getJobRecommendations(candidateUser, activeJobs);
+  return recommendations;
 };

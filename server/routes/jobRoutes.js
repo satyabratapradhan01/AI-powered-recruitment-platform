@@ -5,6 +5,7 @@ import {
   getJobById,
   updateJob,
   deleteJob,
+  getRecommendedJobs,
 } from '../controllers/jobController.js';
 import {
   authenticate,
@@ -28,6 +29,11 @@ router
     validateJobCreate,
     createJob
   );
+
+// GET /api/jobs/recommended (Job Seeker / Candidate / Admin)
+router
+  .route('/recommended')
+  .get(authenticate, authorize('job_seeker', 'seeker', 'admin'), getRecommendedJobs);
 
 // GET /api/jobs/:id (Public/Optional Auth) & PUT/DELETE /api/jobs/:id (HR Owner / Admin)
 router

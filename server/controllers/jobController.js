@@ -58,3 +58,15 @@ export const deleteJob = asyncHandler(async (req, res) => {
   );
   return successResponse(res, 200, 'Job deleted successfully', result);
 });
+
+// @desc    Get AI-powered personalized job recommendations for candidate
+// @route   GET /api/jobs/recommended
+// @access  Private (Job Seeker / Candidate / Admin)
+export const getRecommendedJobs = asyncHandler(async (req, res) => {
+  const recommendations = await jobService.getRecommendedJobs(req.user);
+  return res.status(200).json({
+    status: 'success',
+    count: recommendations.length,
+    data: recommendations,
+  });
+});

@@ -428,7 +428,43 @@ const runE2ETests = async () => {
     }
     console.log('✅ Step 21c. Verified strict JSON Schema structure for Gemini ATS Analysis.');
 
-    console.log('\n🎉 ALL 21 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AND AI ATS TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 18 AI JOB RECOMMENDATIONS VERIFICATIONS ---
+    console.log('\n--- Step 18 AI Job Recommendations Verification ---');
+
+    // 22a. Candidate requests personalized job recommendations
+    const recRes = await request(`${BASE_URL}/jobs/recommended`, { headers: headers1 });
+    console.log(
+      '✅ Step 22a. Fetched Candidate Job Recommendations count:',
+      recRes.data.length
+    );
+
+    if (recRes.data.length === 0) {
+      throw new Error('Expected at least one active job recommendation!');
+    }
+
+    const topRec = recRes.data[0];
+    console.log(
+      '✅ Step 22b. Top Recommended Job:',
+      topRec.job.title,
+      'at',
+      topRec.job.company,
+      '| Match Score:',
+      topRec.matchScore + '%',
+      '| Explanation:',
+      topRec.explanation.substring(0, 60) + '...'
+    );
+
+    if (
+      typeof topRec.matchScore !== 'number' ||
+      !Array.isArray(topRec.matchingSkills) ||
+      !Array.isArray(topRec.missingSkills) ||
+      typeof topRec.explanation !== 'string'
+    ) {
+      throw new Error('Job recommendation response missing required match fields!');
+    }
+    console.log('✅ Step 22c. Verified explainable match fields (matchScore, matchingSkills, missingSkills, explanation).');
+
+    console.log('\n🎉 ALL 22 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AI ATS, AND JOB RECOMMENDATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

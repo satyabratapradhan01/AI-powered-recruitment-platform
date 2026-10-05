@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getApplicationsApi } from '../services/api';
+import { getApplicationsApi, getRecommendedJobsApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { mockJobs, mockInterviews, mockNotifications, mockProfile } from '../data/seekerMockData';
 import StatusBadge from '../components/StatusBadge';
@@ -27,6 +27,8 @@ import {
   ExternalLink,
   MapPin,
   CheckCircle2,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -35,22 +37,36 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchApplications = async () => {
+  const [recommendations, setRecommendations] = useState([]);
+  const [recLoading, setRecLoading] = useState(true);
+
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getApplicationsApi();
-      setApplications(response.data.data);
+      const appRes = await getApplicationsApi();
+      setApplications(appRes.data.data);
     } catch (err) {
       console.error('Error fetching dashboard applications:', err);
       setError(err.response?.data?.message || 'Failed to load dashboard statistics');
     } finally {
       setLoading(false);
     }
+
+    try {
+      setRecLoading(true);
+      const recRes = await getRecommendedJobsApi();
+      setRecommendations(recRes.data.data || []);
+    } catch (err) {
+      console.error('Error fetching job recommendations:', err);
+      setRecommendations([]);
+    } finally {
+      setRecLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchApplications();
+    fetchDashboardData();
   }, []);
 
   const totalCount = applications.length;
@@ -276,44 +292,115 @@ const Dashboard = () => {
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" /> Top AI Job Matches
             </CardTitle>
-            <CardDescription>Open roles matched to your resume & skills</CardDescription>
+            <CardDescription>Personalized open roles matched to your resume, skills & experience</CardDescription>
           </div>
           <Link to="/jobs">
             <Button variant="ghost" size="xs" rightIcon={ArrowRight}>
-              Search Jobs
+              Search All Jobs
             </Button>
           </Link>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {mockJobs.slice(0, 3).map((job) => (
-              <div
-                key={job.id}
-                className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:shadow-md transition space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm leading-snug">{job.title}</h4>
-                      <p className="text-xs font-semibold text-slate-600">{job.company}</p>
+          {recLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : recommendations.length === 0 ? (
+            <EmptyState
+              icon={Sparkles}
+              title="No AI Job Recommendations yet"
+              description="Complete your profile skills and upload a resume to receive AI job recommendations."
+              actionLabel="Update Profile Skills"
+              actionLink="/profile"
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {recommendations.slice(0, 3).map((item) => {
+                const job = item.job || item;
+                const matchScore = item.matchScore ?? job.matchScore ?? 80;
+                const matchingSkills = item.matchingSkills || [];
+                const missingSkills = item.missingSkills || [];
+                const explanation = item.explanation || '';
+
+                let badgeVariant = 'purple';
+                if (matchScore >= 80) badgeVariant = 'success';
+                else if (matchScore >= 60) badgeVariant = 'info';
+
+                return (
+                  <div
+                    key={job._id || job.id}
+                    className="p-4 rounded-2xl border border-slate-200/80 bg-white hover:shadow-lg transition-all space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm leading-snug">{job.title}</h4>
+                          <p className="text-xs font-semibold text-slate-600">{job.company}</p>
+                        </div>
+                        <Badge variant={badgeVariant} size="xs" className="shrink-0 font-bold">
+                          {matchScore}% Match
+                        </Badge>
+                      </div>
+
+                      <div className="text-[11px] text-slate-500 space-y-1">
+                        <p className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400" /> {job.location || 'Remote'} ({job.workMode || 'Full-time'})
+                        </p>
+                        {job.salaryMin ? (
+                          <p className="font-semibold text-slate-700">
+                            ${job.salaryMin.toLocaleString()} - ${job.salaryMax?.toLocaleString()}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {/* Matching Skills */}
+                      {matchingSkills.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1">
+                          {matchingSkills.slice(0, 3).map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-100"
+                            >
+                              <Check className="w-2.5 h-2.5 text-emerald-600" /> {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Missing Skills */}
+                      {missingSkills.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {missingSkills.slice(0, 2).map((s, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-100"
+                            >
+                              <AlertCircle className="w-2.5 h-2.5 text-amber-600" /> Missing: {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Explanation */}
+                      {explanation && (
+                        <p className="text-[11px] text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-100 leading-snug line-clamp-2">
+                          "{explanation}"
+                        </p>
+                      )}
                     </div>
-                    <Badge variant="purple" size="xs">{job.matchScore}% Match</Badge>
+
+                    <Link to={`/jobs/${job._id || job.id}`}>
+                      <Button variant="outline" size="xs" fullWidth rightIcon={ArrowRight} className="mt-2">
+                        View Position
+                      </Button>
+                    </Link>
                   </div>
-                  <div className="text-[11px] text-slate-500 space-y-1">
-                    <p className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400" /> {job.location} ({job.workMode})
-                    </p>
-                    <p className="font-semibold text-slate-700">{job.salary}</p>
-                  </div>
-                </div>
-                <Link to={`/jobs/${job.id}`}>
-                  <Button variant="outline" size="xs" fullWidth rightIcon={ArrowRight}>
-                    View Position
-                  </Button>
-                </Link>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
