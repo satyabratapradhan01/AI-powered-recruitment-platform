@@ -6,6 +6,7 @@ import applicationRoutes from './routes/applicationRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import interviewRoutes from './routes/interviewRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Handle Unknown Routes (404 Not Found)
 app.use(notFoundHandler);

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Briefcase, Menu, LogOut, User, Sparkles, Shield } from 'lucide-react';
+import { Briefcase, Menu, LogOut, User, Sparkles } from 'lucide-react';
 import Avatar from './ui/Avatar';
 import Dropdown from './ui/Dropdown';
 import Badge from './ui/Badge';
+import NotificationBell from './NotificationBell';
 
 const Navbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
@@ -12,12 +13,14 @@ const Navbar = ({ onToggleSidebar }) => {
 
   const roleLabels = {
     seeker: 'Job Seeker',
+    job_seeker: 'Job Seeker',
     hr: 'HR Recruiter',
     admin: 'Platform Admin',
   };
 
   const roleVariants = {
     seeker: 'info',
+    job_seeker: 'info',
     hr: 'purple',
     admin: 'danger',
   };
@@ -68,10 +71,13 @@ const Navbar = ({ onToggleSidebar }) => {
           </div>
         </div>
 
-        {/* Right: Role Badge & User Profile Dropdown */}
+        {/* Right: Notification Bell, Role Badge & User Profile Dropdown */}
         <div className="flex items-center gap-3">
           {user && (
             <div className="flex items-center gap-3">
+              {/* In-App Notification Bell */}
+              <NotificationBell />
+
               <Badge variant={roleVariants[userRole] || 'info'} size="xs" showDot>
                 {roleLabels[userRole] || 'Job Seeker'}
               </Badge>

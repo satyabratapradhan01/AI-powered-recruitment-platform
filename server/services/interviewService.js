@@ -7,6 +7,7 @@ import {
   sendInterviewRescheduledEmail,
   sendInterviewCancelledEmail,
 } from './emailService.js';
+import { createNotification } from './notificationService.js';
 
 /**
  * Interview Scheduling Business Logic & Database Service.
@@ -76,7 +77,17 @@ export const scheduleInterview = async (recruiterId, userRole, data) => {
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
 
-  // Trigger email notification to candidate (async, failure won't rollback DB)
+  // Trigger in-app notification for candidate
+  await createNotification({
+    userId: candidateId,
+    type: 'interview_scheduled',
+    title: 'Interview Scheduled',
+    message: `${populatedInterview.interviewType} interview scheduled for ${application.jobTitle} at ${application.company} on ${interviewTime}.`,
+    relatedApplicationId: applicationId,
+    relatedInterviewId: interview._id,
+  });
+
+  // Trigger email notification to candidate
   const candidateUser = populatedInterview.candidateId;
   if (candidateUser && candidateUser.email) {
     sendInterviewScheduledEmail({
@@ -133,6 +144,16 @@ export const rescheduleInterview = async (interviewId, recruiterId, userRole, da
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
 
+  // Trigger in-app notification for candidate
+  await createNotification({
+    userId: interview.candidateId,
+    type: 'interview_rescheduled',
+    title: 'Interview Rescheduled',
+    message: `Your interview for ${application ? application.jobTitle : 'Job Role'} has been rescheduled to ${populatedInterview.interviewTime}.`,
+    relatedApplicationId: interview.applicationId,
+    relatedInterviewId: interview._id,
+  });
+
   const candidateUser = populatedInterview.candidateId;
   if (candidateUser && candidateUser.email) {
     sendInterviewRescheduledEmail({
@@ -171,13 +192,25 @@ export const completeInterview = async (interviewId, recruiterId, userRole, data
     await application.save();
   }
 
-  return await Interview.findById(interview._id)
+  const populatedInterview = await Interview.findById(interview._id)
     .populate({
       path: 'applicationId',
       populate: { path: 'jobId' },
     })
     .populate('candidateId', 'name email profile')
     .populate('recruiterId', 'name email profile.companyName');
+
+  // Trigger in-app notification for candidate
+  await createNotification({
+    userId: interview.candidateId,
+    type: 'interview_completed',
+    title: 'Interview Completed',
+    message: `Your interview for ${application ? application.jobTitle : 'Job Role'} has been marked as completed.`,
+    relatedApplicationId: interview.applicationId,
+    relatedInterviewId: interview._id,
+  });
+
+  return populatedInterview;
 };
 
 export const cancelInterview = async (interviewId, recruiterId, userRole, data = {}) => {
@@ -204,6 +237,16 @@ export const cancelInterview = async (interviewId, recruiterId, userRole, data =
 
   const candidateUser = populatedInterview.candidateId;
   const application = await JobApplication.findById(interview.applicationId);
+
+  // Trigger in-app notification for candidate
+  await createNotification({
+    userId: interview.candidateId,
+    type: 'interview_cancelled',
+    title: 'Interview Cancelled',
+    message: `Your interview for ${application ? application.jobTitle : 'Job Role'} has been cancelled.`,
+    relatedApplicationId: interview.applicationId,
+    relatedInterviewId: interview._id,
+  });
 
   if (candidateUser && candidateUser.email) {
     sendInterviewCancelledEmail({

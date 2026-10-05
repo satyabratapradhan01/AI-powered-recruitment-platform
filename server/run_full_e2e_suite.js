@@ -349,7 +349,44 @@ const runE2ETests = async () => {
     });
     console.log('✅ Step 19c. HR Rescheduled Interview (Reschedule Email Triggered):', rescheduleRes.data.status);
 
-    console.log('\n🎉 ALL 19 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, AND EMAIL NOTIFICATION TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 16 IN-APP NOTIFICATIONS VERIFICATIONS ---
+    console.log('\n--- Step 16 In-App Notifications System Verification ---');
+
+    // 20a. Fetch candidate notifications
+    const notificationsRes = await request(`${BASE_URL}/notifications`, { headers: headers1 });
+    const notificationsList = notificationsRes.data || [];
+    console.log(
+      '✅ Step 20a. Fetched Candidate Notifications count:',
+      notificationsList.length,
+      '| Unread Count:',
+      notificationsRes.unreadCount
+    );
+
+    if (notificationsList.length === 0) {
+      throw new Error('Expected candidate to have generated in-app notifications!');
+    }
+
+    const firstNotifId = notificationsList[0]._id;
+
+    // 20b. Mark single notification as read
+    const markSingleRes = await request(`${BASE_URL}/notifications/${firstNotifId}/read`, {
+      method: 'PATCH',
+      headers: headers1,
+    });
+    console.log('✅ Step 20b. Marked Single Notification as Read:', markSingleRes.data.read === true);
+
+    // 20c. Mark all notifications as read
+    const markAllRes = await request(`${BASE_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: headers1,
+    });
+    console.log('✅ Step 20c. Marked All Notifications as Read:', markAllRes.message);
+
+    // 20d. Verify unread count is now 0
+    const finalNotifRes = await request(`${BASE_URL}/notifications`, { headers: headers1 });
+    console.log('✅ Step 20d. Verified Final Unread Count:', finalNotifRes.unreadCount);
+
+    console.log('\n🎉 ALL 20 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, AND IN-APP NOTIFICATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

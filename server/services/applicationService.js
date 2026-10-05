@@ -6,6 +6,7 @@ import {
   sendApplicationSubmittedEmail,
   sendApplicationStatusUpdateEmail,
 } from './emailService.js';
+import { createNotification } from './notificationService.js';
 
 /**
  * Recruitment Application Business Logic & Database Service.
@@ -64,7 +65,16 @@ export const createApplication = async (userId, data) => {
       appliedAt: new Date(),
     });
 
-    // Trigger email notification to candidate (async, failure won't rollback DB)
+    // Create in-app notification for candidate
+    await createNotification({
+      userId,
+      type: 'application_status',
+      title: 'Application Submitted',
+      message: `Your application for ${job.title} at ${job.company} was submitted successfully.`,
+      relatedApplicationId: application._id,
+    });
+
+    // Trigger email notification to candidate
     if (candidateUser && candidateUser.email) {
       sendApplicationSubmittedEmail({
         candidateEmail: candidateUser.email,
@@ -252,12 +262,19 @@ export const updateApplication = async (id, userId, userRole, updateData) => {
 
   const updatedApplication = await application.save();
 
-  // Trigger status change email notification if status actually changed (no duplicates)
+  // Trigger status change notification if status changed
   if (oldStatus !== updatedApplication.status) {
-    const candidateUser = await User.findById(
-      updatedApplication.candidateId || updatedApplication.userId
-    );
+    const targetUserId = updatedApplication.candidateId || updatedApplication.userId;
 
+    await createNotification({
+      userId: targetUserId,
+      type: 'application_status',
+      title: `Application Status: ${updatedApplication.status}`,
+      message: `Your application for ${updatedApplication.jobTitle} at ${updatedApplication.company} has been updated to ${updatedApplication.status}.`,
+      relatedApplicationId: updatedApplication._id,
+    });
+
+    const candidateUser = await User.findById(targetUserId);
     if (candidateUser && candidateUser.email) {
       sendApplicationStatusUpdateEmail({
         candidateEmail: candidateUser.email,
@@ -289,6 +306,14 @@ export const withdrawApplication = async (id, userId) => {
   await application.save();
 
   if (oldStatus !== 'Withdrawn') {
+    await createNotification({
+      userId,
+      type: 'application_status',
+      title: 'Application Withdrawn',
+      message: `Your application for ${application.jobTitle} at ${application.company} has been withdrawn.`,
+      relatedApplicationId: application._id,
+    });
+
     const candidateUser = await User.findById(userId);
     if (candidateUser && candidateUser.email) {
       sendApplicationStatusUpdateEmail({
