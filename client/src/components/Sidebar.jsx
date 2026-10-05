@@ -10,17 +10,18 @@ import {
   Bell,
   PlusCircle,
   Users,
+  Kanban,
+  ShieldCheck,
+  TrendingUp,
   X,
-  Sparkles,
-  Building2,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const isHRRoute = location.pathname.startsWith('/hr');
-  const isHRRole = user?.role === 'hr' || isHRRoute;
 
   const seekerNavItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -39,14 +40,32 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'HR Interviews', path: '/hr/interviews', icon: Calendar },
   ];
 
-  const currentNavItems = isHRRole ? hrNavItems : seekerNavItems;
+  const adminNavItems = [
+    { label: 'Admin Overview', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'User Management', path: '/admin/users', icon: Users },
+    { label: 'Platform Jobs', path: '/admin/jobs', icon: Briefcase },
+    { label: 'System Applications', path: '/admin/applications', icon: Kanban },
+    { label: 'Platform Analytics', path: '/admin/analytics', icon: TrendingUp },
+  ];
+
+  let currentNavItems = seekerNavItems;
+  let activeRoleColor = 'bg-indigo-600 shadow-indigo-500/20';
+  let portalTitle = 'Candidate Navigation';
+
+  if (isAdminRoute) {
+    currentNavItems = adminNavItems;
+    activeRoleColor = 'bg-slate-900 shadow-slate-900/30';
+    portalTitle = 'Admin Operations Navigation';
+  } else if (isHRRoute) {
+    currentNavItems = hrNavItems;
+    activeRoleColor = 'bg-purple-600 shadow-purple-500/20';
+    portalTitle = 'Recruiter Navigation';
+  }
 
   const linkClasses = ({ isActive }) =>
     `flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-150 ${
       isActive
-        ? isHRRole
-          ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20 font-bold'
-          : 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 font-bold'
+        ? `${activeRoleColor} text-white shadow-sm font-bold`
         : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
     }`;
 
@@ -69,7 +88,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* Mobile Sidebar Close Header */}
           <div className="flex items-center justify-between pb-3 md:hidden border-b border-slate-100">
             <span className="font-bold text-sm text-slate-800">
-              {isHRRole ? 'HR Recruiter Portal' : 'Job Seeker Portal'}
+              {isAdminRoute ? 'Admin Portal' : isHRRoute ? 'HR Recruiter Portal' : 'Candidate Portal'}
             </span>
             <button
               onClick={onClose}
@@ -79,29 +98,37 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Quick Portal Switcher Banner */}
+          {/* Portal Switcher Bar */}
           <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
             <NavLink
               to="/dashboard"
-              className={`flex-1 text-center py-1 text-[11px] font-bold rounded-lg transition ${
-                !isHRRoute ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
+                !isHRRoute && !isAdminRoute ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Candidate
             </NavLink>
             <NavLink
               to="/hr/dashboard"
-              className={`flex-1 text-center py-1 text-[11px] font-bold rounded-lg transition ${
+              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
                 isHRRoute ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              HR Portal
+              HR
+            </NavLink>
+            <NavLink
+              to="/admin/dashboard"
+              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
+                isAdminRoute ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Admin
             </NavLink>
           </div>
 
           <div className="space-y-1">
             <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              {isHRRole ? 'Recruiter Navigation' : 'Candidate Navigation'}
+              {portalTitle}
             </p>
             {currentNavItems.map((item) => {
               const Icon = item.icon;
@@ -123,21 +150,25 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Sidebar Footer Info Card */}
         <div
           className={`p-3.5 border rounded-xl space-y-1.5 ${
-            isHRRole
+            isAdminRoute
+              ? 'bg-slate-900 text-white border-slate-800'
+              : isHRRoute
               ? 'bg-purple-50/60 border-purple-100'
               : 'bg-indigo-50/60 border-indigo-100'
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className={`text-xs font-bold ${isHRRole ? 'text-purple-950' : 'text-indigo-950'}`}>
-              {isHRRole ? 'Recruiter Hub' : 'AI ATS Engine'}
+            <p className={`text-xs font-bold ${isAdminRoute ? 'text-slate-100' : isHRRole ? 'text-purple-950' : 'text-indigo-950'}`}>
+              {isAdminRoute ? 'Admin Control' : isHRRoute ? 'Recruiter Hub' : 'AI ATS Engine'}
             </p>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <p className={`text-[11px] leading-snug ${isHRRole ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
-            {isHRRole
-              ? 'Candidate ATS match ranking active.'
-              : 'Resume matched with 94% accuracy.'}
+          <p className={`text-[11px] leading-snug ${isAdminRoute ? 'text-slate-400' : isHRRole ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
+            {isAdminRoute
+              ? 'System operational & active.'
+              : isHRRoute
+              ? 'Candidate ATS match active.'
+              : 'Resume matched with 94% score.'}
           </p>
         </div>
       </aside>

@@ -28,6 +28,13 @@ import HRJobCreate from './pages/hr/HRJobCreate';
 import HRApplicants from './pages/hr/HRApplicants';
 import HRInterviews from './pages/hr/HRInterviews';
 
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminJobs from './pages/admin/AdminJobs';
+import AdminApplications from './pages/admin/AdminApplications';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+
 function App() {
   return (
     <BrowserRouter>
@@ -64,6 +71,13 @@ function App() {
                 <Route path="/hr/jobs/:id/edit" element={<HRJobCreate />} />
                 <Route path="/hr/applicants" element={<HRApplicants />} />
                 <Route path="/hr/interviews" element={<HRInterviews />} />
+
+                {/* Admin Operations Routes */}
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/jobs" element={<AdminJobs />} />
+                <Route path="/admin/applications" element={<AdminApplications />} />
+                <Route path="/admin/analytics" element={<AdminAnalytics />} />
               </Route>
             </Route>
 
