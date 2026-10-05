@@ -386,7 +386,49 @@ const runE2ETests = async () => {
     const finalNotifRes = await request(`${BASE_URL}/notifications`, { headers: headers1 });
     console.log('✅ Step 20d. Verified Final Unread Count:', finalNotifRes.unreadCount);
 
-    console.log('\n🎉 ALL 20 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, AND IN-APP NOTIFICATION TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 17 AI-POWERED ATS ANALYSIS VERIFICATIONS ---
+    console.log('\n--- Step 17 AI-Powered ATS Analysis Verification ---');
+
+    // 21a. Verify candidate application automatically contains ATS analysis
+    const appWithATS = await request(`${BASE_URL}/applications/${recruitmentAppId}`, { headers: headers1 });
+    console.log(
+      '✅ Step 21a. Application Auto ATS Analysis Score:',
+      appWithATS.data.atsScore,
+      '| Matched Skills Count:',
+      appWithATS.data.atsAnalysis?.matchedSkills?.length ?? 0
+    );
+
+    // 21b. Trigger manual/on-demand ATS Analysis endpoint
+    const manualATSRes = await request(`${BASE_URL}/applications/${recruitmentAppId}/ats-analysis`, {
+      method: 'POST',
+      headers: hrHeaders,
+    });
+    const atsData = manualATSRes.data.atsAnalysis;
+    console.log(
+      '✅ Step 21b. On-Demand ATS Analysis Executed:',
+      'Score:',
+      manualATSRes.data.atsScore,
+      '| Summary:',
+      atsData?.summary?.substring(0, 70) + '...'
+    );
+
+    // 21c. Validate JSON output structure requirements
+    if (
+      typeof atsData?.score !== 'number' ||
+      !Array.isArray(atsData?.matchedSkills) ||
+      !Array.isArray(atsData?.missingSkills) ||
+      !Array.isArray(atsData?.matchedKeywords) ||
+      !Array.isArray(atsData?.missingKeywords) ||
+      typeof atsData?.experienceMatch !== 'boolean' ||
+      typeof atsData?.educationMatch !== 'boolean' ||
+      !Array.isArray(atsData?.suggestions) ||
+      typeof atsData?.summary !== 'string'
+    ) {
+      throw new Error('ATS Analysis output does not match required JSON schema!');
+    }
+    console.log('✅ Step 21c. Verified strict JSON Schema structure for Gemini ATS Analysis.');
+
+    console.log('\n🎉 ALL 21 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AND AI ATS TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

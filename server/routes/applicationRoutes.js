@@ -7,6 +7,7 @@ import {
   updateApplication,
   withdrawApplication,
   deleteApplication,
+  triggerATSAnalysis,
 } from '../controllers/applicationController.js';
 import {
   validateApplicationCreate,
@@ -32,6 +33,11 @@ router
 router
   .route('/:id/withdraw')
   .put(authorize('job_seeker', 'seeker', 'admin'), withdrawApplication);
+
+// Trigger AI-powered ATS Analysis route
+router
+  .route('/:id/ats-analysis')
+  .post(authorize('job_seeker', 'seeker', 'hr', 'admin'), triggerATSAnalysis);
 
 // GET /api/applications/:id, PUT /api/applications/:id, DELETE /api/applications/:id
 router

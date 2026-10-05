@@ -85,3 +85,20 @@ export const deleteApplication = asyncHandler(async (req, res) => {
     _id: deletedApplication._id,
   });
 });
+
+// @desc    Trigger AI-Powered ATS Analysis on an application
+// @route   POST /api/applications/:id/ats-analysis
+// @access  Private (Candidate Owner / HR Owner / Admin)
+export const triggerATSAnalysis = asyncHandler(async (req, res) => {
+  const application = await applicationService.triggerATSAnalysis(
+    req.params.id,
+    req.user._id,
+    req.user.role
+  );
+  return successResponse(
+    res,
+    200,
+    'ATS Analysis completed successfully',
+    application
+  );
+});

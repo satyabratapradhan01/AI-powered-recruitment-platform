@@ -7,6 +7,7 @@ import {
   sendApplicationStatusUpdateEmail,
 } from './emailService.js';
 import { createNotification } from './notificationService.js';
+import { analyzeResumeATS } from './aiService.js';
 
 /**
  * Recruitment Application Business Logic & Database Service.
@@ -64,6 +65,22 @@ export const createApplication = async (userId, data) => {
       appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
       appliedAt: new Date(),
     });
+
+    // Run AI-powered ATS Analysis
+    try {
+      const atsResult = await analyzeResumeATS({
+        resumeText: resumeData?.parsedText || '',
+        jobDescription: job.description || '',
+        requiredSkills: job.requiredSkills || [],
+        preferredSkills: job.preferredSkills || [],
+        experienceRequired: job.experienceRequired || '',
+      });
+      application.atsScore = atsResult.score;
+      application.atsAnalysis = atsResult;
+      await application.save();
+    } catch (atsErr) {
+      console.error('[Application Service] ATS Analysis error during application creation:', atsErr.message);
+    }
 
     // Create in-app notification for candidate
     await createNotification({
@@ -354,4 +371,57 @@ export const deleteApplication = async (id, userId, userRole) => {
 
   await application.deleteOne();
   return { _id: id };
+};
+
+export const triggerATSAnalysis = async (id, userId, userRole) => {
+  const application = await JobApplication.findById(id)
+    .populate('jobId')
+    .populate('candidateId');
+
+  if (!application) {
+    throw new AppError('Job application not found', 404);
+  }
+
+  const isCandidateOwner =
+    (application.candidateId && application.candidateId._id.toString() === userId.toString()) ||
+    (application.userId && application.userId.toString() === userId.toString());
+
+  let isHROwner = false;
+  if (application.jobId && application.jobId.postedBy) {
+    const posterId = application.jobId.postedBy._id
+      ? application.jobId.postedBy._id.toString()
+      : application.jobId.postedBy.toString();
+    isHROwner = posterId === userId.toString();
+  }
+
+  const isAdmin = userRole === 'admin';
+
+  if (!isCandidateOwner && !isHROwner && !isAdmin) {
+    throw new AppError('Forbidden: Access denied to trigger ATS analysis on this application', 403);
+  }
+
+  const resumeText =
+    application.resume?.parsedText ||
+    application.candidateId?.resume?.parsedText ||
+    '';
+
+  const job = application.jobId || {};
+  const jobDescription = job.description || `${application.company} ${application.jobTitle}`;
+  const requiredSkills = job.requiredSkills || [];
+  const preferredSkills = job.preferredSkills || [];
+  const experienceRequired = job.experienceRequired || '';
+
+  const atsResult = await analyzeResumeATS({
+    resumeText,
+    jobDescription,
+    requiredSkills,
+    preferredSkills,
+    experienceRequired,
+  });
+
+  application.atsScore = atsResult.score;
+  application.atsAnalysis = atsResult;
+  await application.save();
+
+  return application;
 };
