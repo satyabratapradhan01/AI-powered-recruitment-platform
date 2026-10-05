@@ -88,3 +88,13 @@ export const validateJobUpdate = (req, res, next) => {
 
   next();
 };
+
+export const validateInterviewSchedule = (req, res, next) => {
+  const { applicationId, interviewDate, interviewTime } = req.body;
+  if (!applicationId || !interviewDate || !interviewTime) {
+    return next(
+      new AppError('Please provide applicationId, interviewDate, and interviewTime', 400)
+    );
+  }
+  next();
+};

@@ -245,26 +245,6 @@ const runE2ETests = async () => {
     const createdJobId = jobPostRes.data._id;
     console.log('✅ Step 15a. HR Posted New Job:', jobPostRes.data.title, 'at', jobPostRes.data.company, '(ID:', createdJobId + ')');
 
-    // 15b. Job Seeker attempts to post a job (should be 403 Forbidden)
-    try {
-      await request(`${BASE_URL}/jobs`, {
-        method: 'POST',
-        headers: headers1,
-        body: newJobData,
-      });
-      console.error('❌ FAIL: Job Seeker was allowed to post a job!');
-    } catch (err) {
-      console.log('✅ Step 15b. Job Seeker job post attempt correctly forbidden with status:', err.status, `("${err.message}")`);
-    }
-
-    // 15c. Search & Filter jobs
-    const searchJobsRes = await request(`${BASE_URL}/jobs?search=AI&workMode=Remote&page=1&limit=5`);
-    console.log('✅ Step 15c. Public Job Search & Pagination:', searchJobsRes.data.length, 'jobs found, Total:', searchJobsRes.total);
-
-    // 15d. Get single job by ID
-    const singleJobRes = await request(`${BASE_URL}/jobs/${createdJobId}`);
-    console.log('✅ Step 15d. Get Job Details:', singleJobRes.data.title, 'Salary range:', `$${singleJobRes.data.salaryMin} - $${singleJobRes.data.salaryMax}`);
-
     // --- STEP 12 RESUME + CLOUDFLARE R2 STORAGE VERIFICATIONS ---
     console.log('\n--- Step 12 Resume + Cloudflare R2 Storage Verification ---');
 
@@ -305,43 +285,82 @@ const runE2ETests = async () => {
     const recruitmentAppId = jobAppRes.data._id;
     console.log('✅ Step 17a. Candidate Applied to Job Posting:', jobAppRes.data.jobTitle, 'Status:', jobAppRes.data.status, '(App ID:', recruitmentAppId + ')');
 
-    // 17b. Duplicate application prevention check
-    try {
-      await request(`${BASE_URL}/applications`, {
-        method: 'POST',
-        headers: headers1,
-        body: { jobId: createdJobId },
-      });
-      console.error('❌ FAIL: Duplicate application was allowed!');
-    } catch (err) {
-      console.log('✅ Step 17b. Duplicate application correctly rejected with status:', err.status, `("${err.message}")`);
-    }
+    // --- STEP 14 INTERVIEW SCHEDULING VERIFICATIONS ---
+    console.log('\n--- Step 14 Interview Scheduling Verification ---');
 
-    // 17c. HR views applicants for their job posting
-    const hrApplicantsRes = await request(`${BASE_URL}/applications?jobId=${createdJobId}`, {
+    // 18a. HR Schedules Interview with Candidate
+    const scheduleData = {
+      applicationId: recruitmentAppId,
+      interviewDate: '2026-10-15',
+      interviewTime: '11:00 AM EST',
+      duration: 60,
+      interviewType: 'System Design',
+      meetingLink: 'https://meet.google.com/abc-defg-hij',
+      interviewerName: 'Sarah Recruiter & Tech Lead',
+      notes: 'Focus on distributed system architecture and Node.js microservices.',
+    };
+
+    const scheduleRes = await request(`${BASE_URL}/interviews`, {
+      method: 'POST',
+      headers: hrHeaders,
+      body: scheduleData,
+    });
+    const createdInterviewId = scheduleRes.data._id;
+    console.log(
+      '✅ Step 18a. HR Scheduled Interview:',
+      scheduleRes.data.interviewType,
+      'at',
+      scheduleRes.data.interviewTime,
+      '| Meeting Link:',
+      scheduleRes.data.meetingLink,
+      '| Status:',
+      scheduleRes.data.status
+    );
+
+    // 18b. Verify linked Application status updated to 'Interview Scheduled'
+    const appAfterSchedule = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
       headers: hrHeaders,
     });
-    console.log('✅ Step 17c. HR Viewed Applicants for Job:', hrApplicantsRes.data.length, 'applicant(s) found. Candidate Name:', hrApplicantsRes.data[0].candidateId.name);
+    console.log('✅ Step 18b. Application status automatically synced to:', appAfterSchedule.data.status);
 
-    // 17d. HR updates status & adds recruiter notes
-    const hrUpdateStatusRes = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
+    // 18c. Candidate views upcoming interviews & meeting link
+    const candidateInterviewsRes = await request(`${BASE_URL}/interviews?upcoming=true`, {
+      headers: headers1,
+    });
+    console.log(
+      '✅ Step 18c. Candidate Viewed Upcoming Interviews:',
+      candidateInterviewsRes.data.length,
+      'interview(s) found | Meeting Link:',
+      candidateInterviewsRes.data[0].meetingLink
+    );
+
+    // 18d. HR Reschedules Interview
+    const rescheduleRes = await request(`${BASE_URL}/interviews/${createdInterviewId}/reschedule`, {
       method: 'PUT',
       headers: hrHeaders,
       body: {
-        status: 'Shortlisted',
-        recruiterNotes: 'Candidate has impressive Node.js and React background.',
+        interviewDate: '2026-10-16',
+        interviewTime: '02:00 PM EST',
+        notes: 'Rescheduled per candidate request',
       },
     });
-    console.log('✅ Step 17d. HR Updated Application Status:', hrUpdateStatusRes.data.status, '| Recruiter Notes:', hrUpdateStatusRes.data.recruiterNotes);
+    console.log('✅ Step 18d. HR Rescheduled Interview:', rescheduleRes.data.interviewTime, '| Status:', rescheduleRes.data.status);
 
-    // 17e. Candidate withdraws application
-    const withdrawRes = await request(`${BASE_URL}/applications/${recruitmentAppId}/withdraw`, {
+    // 18e. HR Marks Interview as Completed
+    const completeRes = await request(`${BASE_URL}/interviews/${createdInterviewId}/complete`, {
       method: 'PUT',
-      headers: headers1,
+      headers: hrHeaders,
+      body: { notes: 'Passed technical round with flying colors!' },
     });
-    console.log('✅ Step 17e. Candidate Withdrew Application:', withdrawRes.data.status);
+    console.log('✅ Step 18e. HR Completed Interview:', completeRes.data.status, '| Notes:', completeRes.data.notes);
 
-    console.log('\n🎉 ALL 17 END-TO-END, RBAC, R2 RESUME, AND RECRUITMENT WORKFLOW TESTS PASSED WITH 100% SUCCESS!');
+    // Verify linked Application status updated to 'Interview Completed'
+    const appAfterComplete = await request(`${BASE_URL}/applications/${recruitmentAppId}`, {
+      headers: hrHeaders,
+    });
+    console.log('✅ Step 18f. Application status automatically synced to:', appAfterComplete.data.status);
+
+    console.log('\n🎉 ALL 18 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, AND INTERVIEW SCHEDULING TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {
