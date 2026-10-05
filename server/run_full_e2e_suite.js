@@ -8,13 +8,18 @@ const PORT = 5001;
 const BASE_URL = `http://localhost:${PORT}/api`;
 
 const request = async (url, options = {}) => {
+  const headers = { ...options.headers };
+  let body = options.body;
+
+  if (body && !(body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(body);
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    headers,
+    body,
   });
 
   const data = await res.json().catch(() => ({}));
@@ -287,7 +292,49 @@ const runE2ETests = async () => {
     });
     console.log('✅ Step 15g. HR Deleted Job:', deleteJobRes.message);
 
-    console.log('\n🎉 ALL 15 END-TO-END, RBAC, AND JOB MANAGEMENT TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 12 RESUME + CLOUDFLARE R2 VERIFICATIONS ---
+    console.log('\n--- Step 12 Resume + Cloudflare R2 Storage Verification ---');
+
+    // 16a. Candidate uploads PDF Resume
+    const pdfBuffer = Buffer.from(
+      '%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 55 >>\nstream\nBT /F1 12 Tf 72 712 Td (Satya Pradhan Resume - Software Engineer) Tj ET\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF'
+    );
+    const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' });
+    const formData = new FormData();
+    formData.append('resume', pdfBlob, 'Satya_Pradhan_Resume.pdf');
+
+    const uploadRes = await request(`${BASE_URL}/resumes/upload`, {
+      method: 'POST',
+      headers: headers1,
+      body: formData,
+    });
+    console.log(
+      '✅ Step 16a. Candidate Uploaded Resume:',
+      uploadRes.data.fileName,
+      '| Storage Key:',
+      uploadRes.data.fileKey,
+      '| Extracted Text Length:',
+      uploadRes.data.parsedTextLength
+    );
+
+    // 16b. Candidate views own resume signed URL
+    const myResumeRes = await request(`${BASE_URL}/resumes/my-resume`, { headers: headers1 });
+    console.log('✅ Step 16b. Candidate Signed View URL Generated:', myResumeRes.data.fileUrl.substring(0, 45) + '...');
+
+    // 16c. HR views candidate's resume
+    const candidateResumeRes = await request(`${BASE_URL}/resumes/candidate/${meRes.data._id}`, {
+      headers: hrHeaders,
+    });
+    console.log('✅ Step 16c. HR Viewed Candidate Resume Signed URL:', candidateResumeRes.data.fileName, '| Signed URL generated successfully.');
+
+    // 16d. Candidate deletes resume
+    const deleteResumeRes = await request(`${BASE_URL}/resumes`, {
+      method: 'DELETE',
+      headers: headers1,
+    });
+    console.log('✅ Step 16d. Candidate Deleted Resume:', deleteResumeRes.message);
+
+    console.log('\n🎉 ALL 16 END-TO-END, RBAC, JOB MANAGEMENT, AND R2 RESUME TRAJECTORY TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

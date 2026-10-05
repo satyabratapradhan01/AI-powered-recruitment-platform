@@ -74,8 +74,11 @@ const userSchema = new mongoose.Schema(
     resume: {
       fileUrl: { type: String, trim: true, default: '' },
       fileName: { type: String, trim: true, default: '' },
-      uploadedAt: { type: Date },
       fileKey: { type: String, trim: true, default: '' },
+      uploadedAt: { type: Date },
+      fileSize: { type: Number, default: 0 },
+      mimeType: { type: String, trim: true, default: '' },
+      parsedText: { type: String, default: '' },
     },
   },
   {
