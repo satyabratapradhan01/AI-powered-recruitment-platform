@@ -1,26 +1,80 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Briefcase, Menu, LogOut, User, Sparkles } from 'lucide-react';
+import Avatar from './ui/Avatar';
+import Dropdown from './ui/Dropdown';
 
-const Navbar = () => {
+const Navbar = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
 
+  const dropdownItems = [
+    {
+      label: 'My Account',
+      icon: User,
+      onClick: () => {},
+    },
+    { divider: true },
+    {
+      label: 'Sign Out',
+      icon: LogOut,
+      isDanger: true,
+      onClick: logout,
+    },
+  ];
+
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center space-x-3">
-        <h1 className="text-xl font-bold text-indigo-600">JobTracker</h1>
-      </div>
-      <div className="flex items-center space-x-4">
-        {user && (
-          <span className="text-sm font-medium text-gray-700">
-            Welcome, <span className="font-semibold text-gray-900">{user.name}</span>
-          </span>
-        )}
-        <button
-          onClick={logout}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-md transition"
-        >
-          Logout
-        </button>
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 py-3 transition-all">
+      <div className="flex items-center justify-between">
+        {/* Left: Mobile Toggle & Brand */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-2.5 select-none">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/30">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-lg text-slate-900 tracking-tight">
+                  Talent<span className="text-indigo-600">AI</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  <Sparkles className="w-2.5 h-2.5" /> PRO
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: User Profile Dropdown */}
+        <div className="flex items-center gap-3">
+          {user && (
+            <Dropdown
+              trigger={
+                <div className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-slate-100/80 transition cursor-pointer">
+                  <Avatar name={user.name} size="sm" status="online" />
+                  <div className="hidden sm:block text-left pr-1">
+                    <p className="text-xs font-bold text-slate-800 leading-tight">
+                      {user.name}
+                    </p>
+                    <p className="text-[11px] font-medium text-slate-500 leading-none mt-0.5">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+              }
+              items={dropdownItems}
+              align="right"
+            />
+          )}
+        </div>
       </div>
     </header>
   );

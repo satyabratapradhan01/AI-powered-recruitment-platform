@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
@@ -17,29 +18,31 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Landing Page Route */}
-          <Route path="/" element={<LandingPage />} />
+        <ToastProvider>
+          <Routes>
+            {/* Landing Page Route */}
+            <Route path="/" element={<LandingPage />} />
 
-          {/* Public Unauthenticated Auth Routes */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
-
-          {/* Protected Authenticated Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/applications" element={<Applications />} />
-              <Route path="/applications/new" element={<ApplicationNew />} />
-              <Route path="/applications/:id/edit" element={<ApplicationEdit />} />
+            {/* Public Unauthenticated Auth Routes */}
+            <Route element={<PublicRoute />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
             </Route>
-          </Route>
 
-          {/* Fallback Catch-all Route */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            {/* Protected Authenticated Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/applications" element={<Applications />} />
+                <Route path="/applications/new" element={<ApplicationNew />} />
+                <Route path="/applications/:id/edit" element={<ApplicationEdit />} />
+              </Route>
+            </Route>
+
+            {/* Fallback Catch-all Route */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

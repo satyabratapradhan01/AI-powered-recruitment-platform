@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ErrorMessage from '../components/ErrorMessage';
+import { useToast } from '../context/ToastContext';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import Card, { CardContent } from '../components/ui/Card';
+import ErrorState from '../components/ui/ErrorState';
+import { Mail, Lock, User, Briefcase, UserPlus } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +20,7 @@ const Register = () => {
 
   const { register, login } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const handleChange = (e) => {
     setFormData({
@@ -31,7 +37,7 @@ const Register = () => {
     const { name, email, password, confirmPassword } = formData;
 
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      setValidationError('Please fill in all fields.');
+      setValidationError('Please fill in all required fields.');
       return;
     }
 
@@ -47,10 +53,9 @@ const Register = () => {
 
     try {
       setIsSubmitting(true);
-      // 1. Register the user
       await register(name.trim(), email.trim(), password);
-      // 2. Automatically log in after registration
       await login(email.trim(), password);
+      toast.success('Account created successfully! Welcome aboard.');
       navigate('/dashboard');
     } catch (err) {
       setValidationError(err.message || 'Registration failed. Please try again.');
@@ -60,101 +65,110 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <h1 className="text-3xl font-extrabold text-indigo-600">JobTracker</h1>
-          <h2 className="mt-2 text-2xl font-bold text-gray-900">Create your free account</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Sign in here
-            </Link>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-grid-pattern">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-6 relative z-10 animate-fade-in-up">
+        {/* Brand Header */}
+        <div className="text-center space-y-2">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+            <Briefcase className="w-6 h-6" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Talent<span className="text-indigo-600">AI</span>
+          </h1>
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            AI Recruitment Platform Registration
           </p>
         </div>
 
-        <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200">
-          {validationError && <ErrorMessage message={validationError} />}
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
+        <Card variant="default" className="shadow-xl border-slate-200/80">
+          <CardContent className="space-y-6 p-6 sm:p-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Full Name</label>
-              <div className="mt-1">
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Satya Nadella"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                />
-              </div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                Create your account
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Join our recruitment ecosystem to track jobs and AI matching metrics.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Email Address</label>
-              <div className="mt-1">
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="satya@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                />
-              </div>
-            </div>
+            {validationError && (
+              <ErrorState
+                title="Registration Error"
+                message={validationError}
+              />
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                />
-              </div>
-            </div>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <Input
+                label="Full Name *"
+                type="text"
+                name="name"
+                placeholder="Alex Morgan"
+                value={formData.name}
+                onChange={handleChange}
+                leftIcon={User}
+                required
+              />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                />
-              </div>
-            </div>
+              <Input
+                label="Email Address *"
+                type="email"
+                name="email"
+                placeholder="alex@company.com"
+                value={formData.email}
+                onChange={handleChange}
+                leftIcon={Mail}
+                required
+              />
 
-            <div>
-              <button
+              <Input
+                label="Password *"
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                leftIcon={Lock}
+                required
+              />
+
+              <Input
+                label="Confirm Password *"
+                type="password"
+                name="confirmPassword"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                leftIcon={Lock}
+                required
+              />
+
+              <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 transition"
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={isSubmitting}
+                leftIcon={UserPlus}
+                className="mt-2"
               >
-                {isSubmitting ? (
-                  <span className="flex items-center space-x-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Creating Account...</span>
-                  </span>
-                ) : (
-                  'Register Account'
-                )}
-              </button>
+                Register Account
+              </Button>
+            </form>
+
+            <div className="pt-4 border-t border-slate-100 text-center">
+              <p className="text-xs text-slate-500">
+                Already registered?{' '}
+                <Link
+                  to="/login"
+                  className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+                >
+                  Sign in here
+                </Link>
+              </p>
             </div>
-          </form>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

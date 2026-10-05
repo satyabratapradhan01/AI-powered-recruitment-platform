@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
+import Card, { CardContent, CardFooter } from './ui/Card';
+import Button from './ui/Button';
+import ConfirmationDialog from './ui/ConfirmationDialog';
+import { MapPin, Calendar, ExternalLink, Edit3, Trash2 } from 'lucide-react';
 
 const ApplicationCard = ({ application, onDelete, isDeleting = false }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const formattedDate = application.appliedDate
     ? new Date(application.appliedDate).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -11,74 +17,82 @@ const ApplicationCard = ({ application, onDelete, isDeleting = false }) => {
       })
     : 'N/A';
 
+  const handleDeleteConfirm = () => {
+    onDelete(application._id);
+    setShowDeleteModal(false);
+  };
+
   return (
-    <div
-      className={`bg-white border rounded-lg p-5 shadow-sm transition flex flex-col justify-between ${
-        isDeleting ? 'opacity-60 border-red-200 bg-red-50/20' : 'border-gray-200 hover:shadow-md'
-      }`}
-    >
-      <div>
-        <div className="flex items-start justify-between">
-          <div className="pr-2">
-            <h3 className="font-bold text-gray-900 text-lg leading-snug">{application.jobTitle}</h3>
-            <p className="text-indigo-600 font-semibold text-sm mt-0.5">{application.company}</p>
-          </div>
-          <StatusBadge status={application.status} />
-        </div>
-
-        <div className="mt-4 space-y-1.5 text-xs text-gray-600">
-          {application.location && (
-            <div className="flex items-center space-x-1">
-              <span className="font-medium text-gray-500">📍 Location:</span>
-              <span>{application.location}</span>
+    <>
+      <Card variant="interactive" className="flex flex-col justify-between h-full group">
+        <CardContent className="space-y-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-0.5">
+              <h3 className="font-bold text-slate-900 text-base leading-snug group-hover:text-indigo-600 transition">
+                {application.jobTitle}
+              </h3>
+              <p className="text-xs font-semibold text-slate-600">{application.company}</p>
             </div>
-          )}
-          <div className="flex items-center space-x-1">
-            <span className="font-medium text-gray-500">📅 Applied:</span>
-            <span>{formattedDate}</span>
+            <StatusBadge status={application.status} />
           </div>
-          {application.jobUrl && (
-            <div className="pt-1">
-              <a
-                href={application.jobUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-indigo-600 hover:underline inline-flex items-center font-medium"
-              >
-                View Job Posting ↗
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div className="mt-5 pt-3 border-t border-gray-100 flex items-center justify-end space-x-3">
-        <Link
-          to={`/applications/${application._id}/edit`}
-          className={`px-3 py-1.5 text-xs font-medium border rounded-md transition ${
-            isDeleting
-              ? 'pointer-events-none opacity-50 text-gray-400 border-gray-200'
-              : 'text-indigo-600 hover:bg-indigo-50 border-indigo-200'
-          }`}
-        >
-          Edit
-        </Link>
-        <button
-          onClick={() => onDelete(application._id)}
-          disabled={isDeleting}
-          className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-md transition disabled:opacity-60 flex items-center space-x-1.5"
-        >
-          {isDeleting ? (
-            <>
-              <span className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></span>
-              <span>Deleting...</span>
-            </>
-          ) : (
-            <span>Delete</span>
-          )}
-        </button>
-      </div>
-    </div>
+          <div className="space-y-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
+            {application.location && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{application.location}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Applied on {formattedDate}</span>
+            </div>
+            {application.jobUrl && (
+              <div className="pt-1">
+                <a
+                  href={application.jobUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-semibold hover:underline"
+                >
+                  <span>Job Posting</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </div>
+        </CardContent>
+
+        <CardFooter className="gap-2">
+          <Link to={`/applications/${application._id}/edit`} className="w-full">
+            <Button variant="outline" size="xs" fullWidth leftIcon={Edit3}>
+              Edit
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="xs"
+            leftIcon={Trash2}
+            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            isLoading={isDeleting}
+            onClick={() => setShowDeleteModal(true)}
+          >
+            Delete
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <ConfirmationDialog
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Application"
+        description={`Are you sure you want to delete the application for "${application.jobTitle}" at ${application.company}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={isDeleting}
+      />
+    </>
   );
 };
 

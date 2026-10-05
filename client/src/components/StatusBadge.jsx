@@ -1,29 +1,26 @@
 import React from 'react';
+import Badge from './ui/Badge';
 
 const StatusBadge = ({ status }) => {
-  const getBadgeStyle = (status) => {
-    switch (status) {
+  const getVariant = (s) => {
+    switch (s) {
       case 'Applied':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'info';
       case 'Interview':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'warning';
       case 'Offer':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+        return 'success';
       case 'Rejected':
-        return 'bg-rose-100 text-rose-800 border-rose-200';
+        return 'danger';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'default';
     }
   };
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getBadgeStyle(
-        status
-      )}`}
-    >
+    <Badge variant={getVariant(status)} showDot size="sm">
       {status || 'Applied'}
-    </span>
+    </Badge>
   );
 };
 
