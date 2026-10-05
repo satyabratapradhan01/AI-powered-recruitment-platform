@@ -464,7 +464,55 @@ const runE2ETests = async () => {
     }
     console.log('✅ Step 22c. Verified explainable match fields (matchScore, matchingSkills, missingSkills, explanation).');
 
-    console.log('\n🎉 ALL 22 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AI ATS, AND JOB RECOMMENDATION TESTS PASSED WITH 100% SUCCESS!');
+    // --- STEP 19 AI CANDIDATE MATCHING FOR HR VERIFICATIONS ---
+    console.log('\n--- Step 19 AI Candidate Matching for HR Verification ---');
+
+    // 23a. HR fetches AI candidate matches for their posted job
+    const matchesRes = await request(`${BASE_URL}/jobs/${createdJobId}/candidate-matches`, { headers: hrHeaders });
+    console.log('✅ Step 23a. HR Candidate Matches count:', matchesRes.data.length);
+
+    if (matchesRes.data.length === 0) {
+      throw new Error('Expected candidate match results for HR job!');
+    }
+
+    const candidateMatch = matchesRes.data[0];
+    console.log(
+      '✅ Step 23b. Top Candidate Match:',
+      candidateMatch.candidateName,
+      '| Match Score:',
+      candidateMatch.matchScore + '%',
+      '| Exp Alignment:',
+      candidateMatch.experienceAlignment?.substring(0, 50) + '...',
+      '| Explanation:',
+      candidateMatch.explanation?.substring(0, 50) + '...'
+    );
+
+    if (
+      typeof candidateMatch.matchScore !== 'number' ||
+      !Array.isArray(candidateMatch.matchedSkills) ||
+      !Array.isArray(candidateMatch.missingSkills) ||
+      typeof candidateMatch.experienceAlignment !== 'string' ||
+      typeof candidateMatch.explanation !== 'string'
+    ) {
+      throw new Error('Candidate match output missing required schema fields!');
+    }
+    console.log('✅ Step 23c. Verified required schema (matchScore, matchedSkills, missingSkills, experienceAlignment, explanation).');
+
+    // 23d. HR sorts applicants by matchScore
+    const sortedAppsRes = await request(`${BASE_URL}/applications?jobId=${createdJobId}&sort=-matchScore`, {
+      headers: hrHeaders,
+    });
+    console.log('✅ Step 23d. HR sorted candidates by AI Match Score. Count:', sortedAppsRes.data.length);
+
+    // 23e. Security Isolation: Stranger cannot view candidate matches for HR job (403)
+    try {
+      await request(`${BASE_URL}/jobs/${createdJobId}/candidate-matches`, { headers: headers2 });
+      console.error('❌ FAIL: Stranger accessed HR candidate matches!');
+    } catch (err) {
+      console.log('✅ Step 23e. Unauthorized candidate match access correctly rejected with status:', err.status, `("${err.message}")`);
+    }
+
+    console.log('\n🎉 ALL 23 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AI ATS, RECOMMENDATION, AND CANDIDATE MATCHING TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

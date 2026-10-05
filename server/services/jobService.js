@@ -1,7 +1,8 @@
 import Job from '../models/Job.js';
 import User from '../models/User.js';
+import JobApplication from '../models/JobApplication.js';
 import AppError from '../utils/AppError.js';
-import { getJobRecommendations } from './aiService.js';
+import { getJobRecommendations, getCandidateMatchesForJob } from './aiService.js';
 
 /**
  * Job Management Business Logic & Database Service.
@@ -231,4 +232,26 @@ export const getRecommendedJobs = async (currentUser) => {
 
   const recommendations = await getJobRecommendations(candidateUser, activeJobs);
   return recommendations;
+};
+
+export const getCandidateMatches = async (jobId, currentUser) => {
+  const job = await Job.findById(jobId);
+  if (!job) {
+    throw new AppError('Job not found', 404);
+  }
+
+  // RBAC Ownership Check: HR can view candidates only for their own job, Admin can view all
+  const isOwner = currentUser && job.postedBy && job.postedBy.toString() === currentUser._id.toString();
+  const isAdmin = currentUser && currentUser.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
+    throw new AppError('Forbidden: You can only view candidate AI matches for your own job postings', 403);
+  }
+
+  const applications = await JobApplication.find({ jobId })
+    .populate('candidateId', 'name email profile skills education experience resume accountStatus')
+    .sort({ createdAt: -1 });
+
+  const matches = await getCandidateMatchesForJob(job, applications);
+  return matches;
 };

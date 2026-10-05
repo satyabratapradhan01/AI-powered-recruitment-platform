@@ -394,3 +394,222 @@ Return MUST be ONLY a valid JSON array of recommendation objects for the provide
 
   return baselineRecommendations.sort((a, b) => b.matchScore - a.matchScore);
 };
+
+/**
+ * Analyze candidates for HR Job Candidate Matching using Gemini AI / Hybrid rule-based engine.
+ * 
+ * @param {Object} job - Job document (title, description, requiredSkills, preferredSkills, experienceRequired)
+ * @param {Array} applications - Array of JobApplication documents populated with candidateId details
+ * @returns {Promise<Array>} List of matched candidate analysis objects sorted by matchScore descending
+ */
+export const getCandidateMatchesForJob = async (job, applications) => {
+  if (!applications || applications.length === 0) {
+    return [];
+  }
+
+  const jobInfo = {
+    title: job.title || '',
+    company: job.company || '',
+    description: (job.description || '').substring(0, 1000),
+    requiredSkills: job.requiredSkills || [],
+    preferredSkills: job.preferredSkills || [],
+    experienceRequired: job.experienceRequired || '',
+  };
+
+  const computeBaselineMatch = (app) => {
+    const candidate = app.candidateId || app.userId || {};
+    const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : [];
+    const resumeText = app.resume?.parsedText || candidate.resume?.parsedText || '';
+    const experience = Array.isArray(candidate.experience) ? candidate.experience : [];
+    const education = Array.isArray(candidate.education) ? candidate.education : [];
+
+    const required = (jobInfo.requiredSkills || []).map((s) => String(s).trim());
+    const preferred = (jobInfo.preferredSkills || []).map((s) => String(s).trim());
+    const allJobSkills = [...new Set([...required, ...preferred])];
+
+    const normalizedCandidateSkills = candidateSkills.map((s) => String(s).toLowerCase().trim());
+    const resumeTextLower = (resumeText || '').toLowerCase();
+
+    const matchedSkills = [];
+    const missingSkills = [];
+
+    allJobSkills.forEach((skill) => {
+      const sLower = skill.toLowerCase();
+      const isDirectMatch = normalizedCandidateSkills.some((cs) => cs.includes(sLower) || sLower.includes(cs));
+      const isResumeMatch = resumeTextLower.includes(sLower);
+
+      if (isDirectMatch || isResumeMatch) {
+        matchedSkills.push(skill);
+      } else {
+        missingSkills.push(skill);
+      }
+    });
+
+    const totalSkills = allJobSkills.length || 1;
+    const matchRatio = matchedSkills.length / totalSkills;
+    let score = Math.round(matchRatio * 70);
+
+    const hasExp = experience && experience.length > 0;
+    if (hasExp) score += 15;
+    if (education && education.length > 0) score += 10;
+    if (matchedSkills.length > 0) score += 5;
+
+    score = Math.min(98, Math.max(25, app.atsScore || score));
+
+    const experienceAlignment = hasExp
+      ? `Candidate has ${experience.length} relevant professional role(s) aligned with ${jobInfo.experienceRequired || 'requirements'}.`
+      : `Profile skills match role requirements; no formal work history listed.`;
+
+    const explanation = matchedSkills.length > 0
+      ? `Candidate demonstrates key required skills (${matchedSkills.slice(0, 3).join(', ')}). High alignment for ${jobInfo.title}.`
+      : `Candidate has core technical foundation, with potential training opportunities in ${missingSkills.slice(0, 2).join(', ')}.`;
+
+    return {
+      applicationId: app._id,
+      candidateId: candidate._id || candidate,
+      candidateName: candidate.name || 'Candidate',
+      candidateEmail: candidate.email || '',
+      matchScore: score,
+      matchedSkills,
+      missingSkills,
+      experienceAlignment,
+      explanation,
+      status: app.status,
+      appliedAt: app.createdAt || app.appliedAt,
+    };
+  };
+
+  const baselineMatches = applications.map(computeBaselineMatch);
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return baselineMatches.sort((a, b) => b.matchScore - a.matchScore);
+  }
+
+  const candidatesForPrompt = applications.slice(0, 15).map((app, idx) => {
+    const candidate = app.candidateId || app.userId || {};
+    const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : [];
+    const resumeText = app.resume?.parsedText || candidate.resume?.parsedText || '';
+    const experience = Array.isArray(candidate.experience) ? candidate.experience : [];
+    const education = Array.isArray(candidate.education) ? candidate.education : [];
+
+    const expSummary = experience
+      .map((e) => `${e.title || ''} at ${e.company || ''} (${e.duration || ''})`)
+      .filter(Boolean)
+      .join('; ');
+
+    const eduSummary = education
+      .map((ed) => `${ed.degree || ''} in ${ed.fieldOfStudy || ed.field || ''}`)
+      .filter(Boolean)
+      .join('; ');
+
+    return {
+      index: idx,
+      applicationId: app._id.toString(),
+      candidateId: candidate._id ? candidate._id.toString() : String(idx),
+      name: candidate.name || 'Candidate',
+      skills: candidateSkills,
+      experienceSummary: expSummary || 'None listed',
+      educationSummary: eduSummary || 'None listed',
+      resumeSnippet: resumeText.substring(0, 2000),
+    };
+  });
+
+  const prompt = `You are an expert HR Talent Acquisition Assistant. Evaluate candidate applications against the specified job requirements.
+
+Important Rules:
+1. Base matching ONLY on technical skills, experience, education, and domain alignment.
+2. DO NOT use sensitive personal attributes (age, gender, race, ethnicity, or location discrimination).
+3. AI is purely an assistive tool. Output is for HR decision support only. Do NOT make final hiring, rejection, or selection decisions.
+
+Job Requirements:
+- Title: ${jobInfo.title}
+- Description: ${jobInfo.description}
+- Required Skills: ${jobInfo.requiredSkills.join(', ')}
+- Preferred Skills: ${jobInfo.preferredSkills.join(', ')}
+- Experience Required: ${jobInfo.experienceRequired}
+
+Candidates to Evaluate:
+${JSON.stringify(candidatesForPrompt, null, 2)}
+
+Instructions:
+Return MUST be ONLY a valid JSON array of evaluation objects for each candidate, matching EXACTLY this JSON structure:
+
+[
+  {
+    "applicationId": "<applicationId>",
+    "matchScore": <number 0-100 compatibility estimate>,
+    "matchedSkills": [<array of string matching skills>],
+    "missingSkills": [<array of string missing skills>],
+    "experienceAlignment": "<1 sentence objective evaluation of experience alignment>",
+    "explanation": "<2-3 sentence objective overview of candidate match strengths and gaps>"
+  }
+]`;
+
+  const models = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash'];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+            },
+          }),
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) continue;
+
+      const jsonResponse = await response.json();
+      const rawText = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText) continue;
+
+      const cleanJsonStr = rawText
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim();
+
+      const aiEvaluations = JSON.parse(cleanJsonStr);
+
+      if (Array.isArray(aiEvaluations)) {
+        const merged = baselineMatches.map((base) => {
+          const aiItem = aiEvaluations.find(
+            (item) => item.applicationId === base.applicationId.toString()
+          );
+          if (aiItem && typeof aiItem.matchScore === 'number') {
+            return {
+              ...base,
+              matchScore: Math.min(100, Math.max(0, Math.round(aiItem.matchScore))),
+              matchedSkills: Array.isArray(aiItem.matchedSkills) ? aiItem.matchedSkills.map(String) : base.matchedSkills,
+              missingSkills: Array.isArray(aiItem.missingSkills) ? aiItem.missingSkills.map(String) : base.missingSkills,
+              experienceAlignment: typeof aiItem.experienceAlignment === 'string' ? aiItem.experienceAlignment.trim() : base.experienceAlignment,
+              explanation: typeof aiItem.explanation === 'string' ? aiItem.explanation.trim() : base.explanation,
+            };
+          }
+          return base;
+        });
+
+        return merged.sort((a, b) => b.matchScore - a.matchScore);
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.warn(`[AI Service] Error matching candidates for job with model ${model}:`, err.message);
+    }
+  }
+
+  return baselineMatches.sort((a, b) => b.matchScore - a.matchScore);
+};

@@ -123,7 +123,15 @@ export const createApplication = async (userId, data) => {
 };
 
 export const getApplications = async (userId, userRole, queryParams = {}) => {
-  const { jobId, status } = queryParams;
+  const { jobId, status, sort, sortBy } = queryParams;
+
+  const sortParam = sort || sortBy || '-createdAt';
+  let sortObject = { createdAt: -1 };
+  if (sortParam === 'matchScore' || sortParam === '-matchScore' || sortParam === 'atsScore' || sortParam === '-atsScore') {
+    sortObject = { atsScore: sortParam.startsWith('-') || sortParam === 'matchScore' || sortParam === 'atsScore' ? -1 : 1 };
+  } else if (sortParam === 'createdAt') {
+    sortObject = { createdAt: 1 };
+  }
 
   // HR Applications View: List candidates who applied to HR's posted jobs
   if (userRole === 'hr') {
@@ -137,7 +145,7 @@ export const getApplications = async (userId, userRole, queryParams = {}) => {
       return await JobApplication.find(query)
         .populate('jobId')
         .populate('candidateId', 'name email profile skills education experience resume accountStatus')
-        .sort({ createdAt: -1 });
+        .sort(sortObject);
     }
 
     // Get all jobs posted by this HR
@@ -150,7 +158,7 @@ export const getApplications = async (userId, userRole, queryParams = {}) => {
     return await JobApplication.find(query)
       .populate('jobId')
       .populate('candidateId', 'name email profile skills education experience resume accountStatus')
-      .sort({ createdAt: -1 });
+      .sort(sortObject);
   }
 
   // Admin View: All applications
@@ -162,7 +170,7 @@ export const getApplications = async (userId, userRole, queryParams = {}) => {
     return await JobApplication.find(query)
       .populate('jobId')
       .populate('candidateId', 'name email profile skills education experience resume accountStatus')
-      .sort({ createdAt: -1 });
+      .sort(sortObject);
   }
 
   // Candidate / Job Seeker View: Own applications

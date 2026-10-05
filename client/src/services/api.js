@@ -35,5 +35,6 @@ export const deleteApplicationApi = (id) => api.delete(`/applications/${id}`);
 
 // Jobs API services
 export const getRecommendedJobsApi = () => api.get('/jobs/recommended');
+export const getCandidateMatchesApi = (jobId) => api.get(`/jobs/${jobId}/candidate-matches`);
 
 export default api;

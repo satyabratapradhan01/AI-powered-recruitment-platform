@@ -70,3 +70,15 @@ export const getRecommendedJobs = asyncHandler(async (req, res) => {
     data: recommendations,
   });
 });
+
+// @desc    Get AI candidate matching analysis for HR job
+// @route   GET /api/jobs/:id/candidate-matches
+// @access  Private (HR Owner / Admin)
+export const getCandidateMatches = asyncHandler(async (req, res) => {
+  const matches = await jobService.getCandidateMatches(req.params.id, req.user);
+  return res.status(200).json({
+    status: 'success',
+    count: matches.length,
+    data: matches,
+  });
+});
