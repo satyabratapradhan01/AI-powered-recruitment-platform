@@ -1,5 +1,6 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
   Search,
@@ -8,12 +9,20 @@ import {
   User,
   Bell,
   PlusCircle,
+  Users,
   X,
   Sparkles,
+  Building2,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const navItems = [
+  const { user } = useAuth();
+  const location = useLocation();
+
+  const isHRRoute = location.pathname.startsWith('/hr');
+  const isHRRole = user?.role === 'hr' || isHRRoute;
+
+  const seekerNavItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Find Jobs', path: '/jobs', icon: Search },
     { label: 'Applications', path: '/applications', icon: Briefcase },
@@ -22,10 +31,22 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Notifications', path: '/notifications', icon: Bell },
   ];
 
+  const hrNavItems = [
+    { label: 'HR Dashboard', path: '/hr/dashboard', icon: LayoutDashboard },
+    { label: 'My Posted Jobs', path: '/hr/jobs', icon: Briefcase },
+    { label: 'Create New Job', path: '/hr/jobs/new', icon: PlusCircle },
+    { label: 'Applicants Pipeline', path: '/hr/applicants', icon: Users },
+    { label: 'HR Interviews', path: '/hr/interviews', icon: Calendar },
+  ];
+
+  const currentNavItems = isHRRole ? hrNavItems : seekerNavItems;
+
   const linkClasses = ({ isActive }) =>
     `flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-150 ${
       isActive
-        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 font-bold'
+        ? isHRRole
+          ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/20 font-bold'
+          : 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 font-bold'
         : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
     }`;
 
@@ -47,7 +68,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="space-y-6">
           {/* Mobile Sidebar Close Header */}
           <div className="flex items-center justify-between pb-3 md:hidden border-b border-slate-100">
-            <span className="font-bold text-sm text-slate-800">Job Seeker Portal</span>
+            <span className="font-bold text-sm text-slate-800">
+              {isHRRole ? 'HR Recruiter Portal' : 'Job Seeker Portal'}
+            </span>
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 text-slate-600"
@@ -56,11 +79,31 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
+          {/* Quick Portal Switcher Banner */}
+          <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
+            <NavLink
+              to="/dashboard"
+              className={`flex-1 text-center py-1 text-[11px] font-bold rounded-lg transition ${
+                !isHRRoute ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Candidate
+            </NavLink>
+            <NavLink
+              to="/hr/dashboard"
+              className={`flex-1 text-center py-1 text-[11px] font-bold rounded-lg transition ${
+                isHRRoute ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              HR Portal
+            </NavLink>
+          </div>
+
           <div className="space-y-1">
             <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Candidate Navigation
+              {isHRRole ? 'Recruiter Navigation' : 'Candidate Navigation'}
             </p>
-            {navItems.map((item) => {
+            {currentNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <NavLink
@@ -78,13 +121,23 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Sidebar Footer Info Card */}
-        <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1.5">
+        <div
+          className={`p-3.5 border rounded-xl space-y-1.5 ${
+            isHRRole
+              ? 'bg-purple-50/60 border-purple-100'
+              : 'bg-indigo-50/60 border-indigo-100'
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-indigo-950">AI ATS Engine</p>
+            <p className={`text-xs font-bold ${isHRRole ? 'text-purple-950' : 'text-indigo-950'}`}>
+              {isHRRole ? 'Recruiter Hub' : 'AI ATS Engine'}
+            </p>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           </div>
-          <p className="text-[11px] text-indigo-700/80 leading-snug">
-            Resume matched against live jobs with 94% accuracy rating.
+          <p className={`text-[11px] leading-snug ${isHRRole ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
+            {isHRRole
+              ? 'Candidate ATS match ranking active.'
+              : 'Resume matched with 94% accuracy.'}
           </p>
         </div>
       </aside>
