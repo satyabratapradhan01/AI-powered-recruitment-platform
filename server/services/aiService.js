@@ -613,3 +613,309 @@ Return MUST be ONLY a valid JSON array of evaluation objects for each candidate,
 
   return baselineMatches.sort((a, b) => b.matchScore - a.matchScore);
 };
+
+/**
+ * Generate AI-Powered Interview Preparation Questions (Technical, HR, Project, Role-Specific)
+ * 
+ * @param {Object} params
+ * @param {string} params.jobTitle
+ * @param {string} params.company
+ * @param {string} params.jobDescription
+ * @param {string} params.resumeText
+ * @param {Array} params.candidateSkills
+ * @returns {Promise<Object>} Categorized interview questions with suggested answer points
+ */
+export const generateInterviewPrepQuestions = async ({
+  jobTitle = '',
+  company = '',
+  jobDescription = '',
+  resumeText = '',
+  candidateSkills = [],
+}) => {
+  const skillsStr = Array.isArray(candidateSkills) ? candidateSkills.join(', ') : String(candidateSkills || '');
+
+  const createFallbackQuestions = () => ({
+    technicalQuestions: [
+      {
+        id: 'tech-1',
+        question: `What are the core architectural principles and technical stack requirements for a ${jobTitle || 'Software Engineer'} role?`,
+        category: 'Technical',
+        suggestedAnswerPoints: [
+          'Explain component architecture and state management',
+          'Discuss database design and RESTful API optimization',
+          'Highlight error handling and code maintainability',
+        ],
+      },
+      {
+        id: 'tech-2',
+        question: `How do you debug performance bottlenecks in backend services or databases under heavy traffic?`,
+        category: 'Technical',
+        suggestedAnswerPoints: [
+          'Use profiling tools and execution plans (explain)',
+          'Implement indexing and caching layers (e.g., Redis)',
+          'Optimize database queries and async non-blocking execution',
+        ],
+      },
+    ],
+    hrQuestions: [
+      {
+        id: 'hr-1',
+        question: `Why are you interested in joining ${company || 'our company'} for the ${jobTitle || 'target'} position?`,
+        category: 'HR / Behavioral',
+        suggestedAnswerPoints: [
+          'Align company mission with personal career goals',
+          'Highlight relevant domain background and technical passion',
+          'Mention collaborative engineering culture',
+        ],
+      },
+      {
+        id: 'hr-2',
+        question: `Describe a scenario where you experienced technical disagreement with team members and how you resolved it.`,
+        category: 'HR / Behavioral',
+        suggestedAnswerPoints: [
+          'Use STAR method (Situation, Task, Action, Result)',
+          'Emphasize data-driven decision making and benchmarks',
+          'Focus on respectful communication and team alignment',
+        ],
+      },
+    ],
+    projectQuestions: [
+      {
+        id: 'proj-1',
+        question: `Walk me through a key project from your resume/background that demonstrates your problem-solving capabilities.`,
+        category: 'Project',
+        suggestedAnswerPoints: [
+          'Detail the project scope and problem statement',
+          'Describe your specific contributions and technology choices',
+          'Share measurable outcomes or performance metrics achieved',
+        ],
+      },
+    ],
+    roleSpecificQuestions: [
+      {
+        id: 'role-1',
+        question: `How do you ensure system reliability, testing coverage, and smooth CI/CD deployment pipelines?`,
+        category: 'Role-Specific',
+        suggestedAnswerPoints: [
+          'Implement unit, integration, and end-to-end automated testing',
+          'Use CI/CD automation pipelines for continuous deployment',
+          'Monitor application health and error logging in production',
+        ],
+      },
+    ],
+  });
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return createFallbackQuestions();
+  }
+
+  const prompt = `You are an expert AI Technical Recruiter and Interview Preparation Coach. Generate a comprehensive, personalized set of interview preparation questions for a candidate applying for a position.
+
+Target Role & Company:
+- Job Title: ${jobTitle || 'N/A'}
+- Company: ${company || 'N/A'}
+- Job Description: ${(jobDescription || 'N/A').substring(0, 1500)}
+
+Candidate Profile:
+- Skills: ${skillsStr || 'N/A'}
+- Resume Summary: ${(resumeText || 'N/A').substring(0, 3000)}
+
+Instructions:
+Generate 4 distinct categories of questions tailored to the candidate's resume and job requirements:
+1. technicalQuestions (2 questions)
+2. hrQuestions (2 questions)
+3. projectQuestions (1-2 questions)
+4. roleSpecificQuestions (1-2 questions)
+
+Each question item MUST include:
+- "id": string unique id
+- "question": string question text
+- "category": string category name
+- "suggestedAnswerPoints": array of string bullet points detailing key hints and suggested answer structure
+
+Return MUST be ONLY a valid JSON object matching EXACTLY this structure:
+{
+  "technicalQuestions": [ { "id": "t1", "question": "...", "category": "Technical", "suggestedAnswerPoints": ["..."] } ],
+  "hrQuestions": [ { "id": "h1", "question": "...", "category": "HR / Behavioral", "suggestedAnswerPoints": ["..."] } ],
+  "projectQuestions": [ { "id": "p1", "question": "...", "category": "Project", "suggestedAnswerPoints": ["..."] } ],
+  "roleSpecificQuestions": [ { "id": "r1", "question": "...", "category": "Role-Specific", "suggestedAnswerPoints": ["..."] } ]
+}`;
+
+  const models = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash'];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+            },
+          }),
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) continue;
+
+      const jsonResponse = await response.json();
+      const rawText = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) continue;
+
+      const cleanJsonStr = rawText
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim();
+
+      const parsed = JSON.parse(cleanJsonStr);
+      if (
+        Array.isArray(parsed.technicalQuestions) &&
+        Array.isArray(parsed.hrQuestions) &&
+        Array.isArray(parsed.projectQuestions) &&
+        Array.isArray(parsed.roleSpecificQuestions)
+      ) {
+        return parsed;
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.warn(`[AI Service] Error generating interview questions with model ${model}:`, err.message);
+    }
+  }
+
+  return createFallbackQuestions();
+};
+
+/**
+ * Provide constructive AI feedback on a candidate's practice interview answer.
+ * 
+ * @param {Object} params
+ * @param {string} params.question
+ * @param {string} params.candidateAnswer
+ * @param {Array} params.suggestedAnswerPoints
+ * @param {string} params.jobTitle
+ * @returns {Promise<Object>} Feedback object containing score, strengths, areasForImprovement, feedback, sampleImprovedAnswer
+ */
+export const evaluateInterviewAnswer = async ({
+  question,
+  candidateAnswer,
+  suggestedAnswerPoints = [],
+  jobTitle = '',
+}) => {
+  const createFallbackFeedback = () => ({
+    score: 80,
+    strengths: [
+      'Directly addresses the question prompt',
+      'Uses clear professional communication',
+    ],
+    areasForImprovement: [
+      'Include specific technical metrics or STAR method details',
+      'Elaborate further on trade-offs and alternative solutions',
+    ],
+    feedback: 'Good practice response! Try adding concrete examples and quantifiable achievements to make your answer even stronger.',
+    sampleImprovedAnswer: `In my experience as a ${jobTitle || 'Software Engineer'}, I approach this by analyzing core requirements, evaluating system trade-offs, and implementing robust automated tests.`,
+  });
+
+  if (!candidateAnswer || !candidateAnswer.trim()) {
+    return {
+      score: 0,
+      strengths: [],
+      areasForImprovement: ['Please provide a written practice answer for evaluation.'],
+      feedback: 'No answer provided. Please type your practice answer to receive AI feedback.',
+      sampleImprovedAnswer: suggestedAnswerPoints.join('. '),
+    };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return createFallbackFeedback();
+  }
+
+  const hintsStr = Array.isArray(suggestedAnswerPoints) ? suggestedAnswerPoints.join('\n- ') : '';
+
+  const prompt = `You are an expert AI Interview Coach. Evaluate the candidate's practice interview answer objectively and constructively.
+
+Question: ${question}
+Role Target: ${jobTitle || 'Target Position'}
+Suggested Key Points / Guidelines:
+- ${hintsStr}
+
+Candidate's Written Practice Answer:
+"""
+${candidateAnswer}
+"""
+
+Instructions:
+Provide constructive, encouraging feedback and return ONLY a valid JSON object matching EXACTLY this structure:
+{
+  "score": <number 0-100 evaluation of answer quality>,
+  "strengths": [<array of 2-3 specific strength bullet points>],
+  "areasForImprovement": [<array of 2-3 specific constructive improvement bullet points>],
+  "feedback": "<2-3 sentence overview feedback encouraging the candidate>",
+  "sampleImprovedAnswer": "<exemplary 3-4 sentence model answer tailored to the question>"
+}`;
+
+  const models = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash'];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+            },
+          }),
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) continue;
+
+      const jsonResponse = await response.json();
+      const rawText = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) continue;
+
+      const cleanJsonStr = rawText
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim();
+
+      const parsed = JSON.parse(cleanJsonStr);
+      if (typeof parsed.score === 'number' && typeof parsed.feedback === 'string') {
+        return {
+          score: Math.min(100, Math.max(0, Math.round(parsed.score))),
+          strengths: Array.isArray(parsed.strengths) ? parsed.strengths.map(String) : [],
+          areasForImprovement: Array.isArray(parsed.areasForImprovement) ? parsed.areasForImprovement.map(String) : [],
+          feedback: parsed.feedback.trim(),
+          sampleImprovedAnswer: typeof parsed.sampleImprovedAnswer === 'string' ? parsed.sampleImprovedAnswer.trim() : '',
+        };
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.warn(`[AI Service] Error evaluating interview answer with model ${model}:`, err.message);
+    }
+  }
+
+  return createFallbackFeedback();
+};

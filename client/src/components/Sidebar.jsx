@@ -16,6 +16,7 @@ import {
   Sparkles,
   Building2,
   FileCheck2,
+  HelpCircle,
   X,
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'My Applications', path: '/applications', icon: Briefcase },
     { label: 'Resume / ATS', path: '/ats-score', icon: FileCheck2 },
     { label: 'Interviews', path: '/interviews', icon: Calendar },
+    { label: 'Interview Prep', path: '/interview-preparation', icon: HelpCircle },
     { label: 'Notifications', path: '/notifications', icon: Bell },
     { label: 'Profile', path: '/profile', icon: User },
   ];

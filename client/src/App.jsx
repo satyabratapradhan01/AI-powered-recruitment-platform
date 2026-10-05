@@ -21,6 +21,7 @@ import ApplicationNew from './pages/ApplicationNew';
 import ApplicationEdit from './pages/ApplicationEdit';
 import ATSScore from './pages/ATSScore';
 import Interviews from './pages/Interviews';
+import InterviewPreparation from './pages/InterviewPreparation';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 
@@ -71,6 +72,7 @@ function App() {
                   <Route path="/applications/:id/edit" element={<ApplicationEdit />} />
                   <Route path="/ats-score" element={<ATSScore />} />
                   <Route path="/interviews" element={<Interviews />} />
+                  <Route path="/interview-preparation" element={<InterviewPreparation />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
                 </Route>

@@ -6,6 +6,8 @@ import {
   cancelInterview,
   getInterviews,
   getInterviewById,
+  generateInterviewPrep,
+  evaluateInterviewAnswer,
 } from '../controllers/interviewController.js';
 import { authenticate, authorize } from '../middleware/authMiddleware.js';
 import { validateInterviewSchedule } from '../middleware/validationMiddleware.js';
@@ -14,6 +16,15 @@ const router = express.Router();
 
 // Apply JWT authentication protection to all interview routes
 router.use(authenticate);
+
+// AI Interview Preparation Routes
+router
+  .route('/prep/generate')
+  .post(authorize('job_seeker', 'seeker', 'admin'), generateInterviewPrep);
+
+router
+  .route('/prep/feedback')
+  .post(authorize('job_seeker', 'seeker', 'admin'), evaluateInterviewAnswer);
 
 // GET /api/interviews (Candidate / HR / Admin) & POST /api/interviews (HR / Admin only)
 router

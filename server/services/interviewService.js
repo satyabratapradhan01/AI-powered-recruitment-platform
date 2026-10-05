@@ -8,6 +8,7 @@ import {
   sendInterviewCancelledEmail,
 } from './emailService.js';
 import { createNotification } from './notificationService.js';
+import { generateInterviewPrepQuestions, evaluateInterviewAnswer } from './aiService.js';
 
 /**
  * Interview Scheduling Business Logic & Database Service.
@@ -313,4 +314,66 @@ export const getInterviewById = async (interviewId, userId, userRole) => {
   }
 
   return interview;
+};
+
+export const generateInterviewPrep = async (userId, data = {}) => {
+  const { applicationId } = data;
+
+  let application;
+  if (applicationId) {
+    application = await JobApplication.findById(applicationId)
+      .populate('jobId')
+      .populate('candidateId');
+  } else {
+    // If no applicationId provided, pick candidate's most recent application
+    application = await JobApplication.findOne({
+      $or: [{ candidateId: userId }, { userId }],
+    })
+      .populate('jobId')
+      .populate('candidateId')
+      .sort({ createdAt: -1 });
+  }
+
+  if (!application) {
+    throw new AppError('Job application not found. Please submit an application first.', 404);
+  }
+
+  const candidateUser = application.candidateId || (await User.findById(userId));
+  const job = application.jobId || {};
+
+  const prepData = await generateInterviewPrepQuestions({
+    jobTitle: application.jobTitle || job.title || 'Software Engineer',
+    company: application.company || job.company || 'Target Company',
+    jobDescription: job.description || `${application.company} ${application.jobTitle}`,
+    resumeText: application.resume?.parsedText || candidateUser?.resume?.parsedText || '',
+    candidateSkills: candidateUser?.skills || [],
+  });
+
+  return {
+    applicationId: application._id,
+    jobTitle: application.jobTitle || job.title,
+    company: application.company || job.company,
+    questions: prepData,
+    technicalQuestions: prepData.technicalQuestions || [],
+    hrQuestions: prepData.hrQuestions || [],
+    projectQuestions: prepData.projectQuestions || [],
+    roleSpecificQuestions: prepData.roleSpecificQuestions || [],
+  };
+};
+
+export const evaluateInterviewAnswerService = async (userId, data = {}) => {
+  const { question, candidateAnswer, suggestedAnswerPoints, jobTitle } = data;
+
+  if (!question) {
+    throw new AppError('Interview question is required for evaluation', 400);
+  }
+
+  const result = await evaluateInterviewAnswer({
+    question,
+    candidateAnswer: candidateAnswer || '',
+    suggestedAnswerPoints: suggestedAnswerPoints || [],
+    jobTitle: jobTitle || 'Target Role',
+  });
+
+  return result;
 };

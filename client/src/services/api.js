@@ -37,4 +37,8 @@ export const deleteApplicationApi = (id) => api.delete(`/applications/${id}`);
 export const getRecommendedJobsApi = () => api.get('/jobs/recommended');
 export const getCandidateMatchesApi = (jobId) => api.get(`/jobs/${jobId}/candidate-matches`);
 
+// Interview Prep API services
+export const generateInterviewPrepApi = (data) => api.post('/interviews/prep/generate', data);
+export const evaluateInterviewAnswerApi = (data) => api.post('/interviews/prep/feedback', data);
+
 export default api;

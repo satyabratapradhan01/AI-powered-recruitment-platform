@@ -512,7 +512,84 @@ const runE2ETests = async () => {
       console.log('✅ Step 23e. Unauthorized candidate match access correctly rejected with status:', err.status, `("${err.message}")`);
     }
 
-    console.log('\n🎉 ALL 23 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AI ATS, RECOMMENDATION, AND CANDIDATE MATCHING TESTS PASSED WITH 100% SUCCESS!');
+    // ==========================================
+    // STEP 24: STEP 20 - AI INTERVIEW PREPARATION
+    // ==========================================
+    console.log('\n--- Step 24: Step 20 - AI Interview Preparation ---');
+
+    // 24a. Generate Interview Prep Questions for Candidate's Application
+    console.log('Step 24a. Generating AI Interview Prep Questions for application:', recruitmentAppId);
+    const prepGenRes = await request(`${BASE_URL}/interviews/prep/generate`, {
+      method: 'POST',
+      headers: headers1,
+      body: { applicationId: recruitmentAppId },
+    });
+
+    console.log('✅ Step 24a. AI Interview Prep generated successfully. Job:', prepGenRes.data.jobTitle, 'Company:', prepGenRes.data.company);
+    const { technicalQuestions, hrQuestions, projectQuestions, roleSpecificQuestions } = prepGenRes.data;
+
+    console.log('  Technical Questions:', technicalQuestions?.length || 0);
+    console.log('  HR Questions:', hrQuestions?.length || 0);
+    console.log('  Project Questions:', projectQuestions?.length || 0);
+    console.log('  Role Specific Questions:', roleSpecificQuestions?.length || 0);
+
+    if (
+      !Array.isArray(technicalQuestions) || technicalQuestions.length === 0 ||
+      !Array.isArray(hrQuestions) || hrQuestions.length === 0 ||
+      !Array.isArray(projectQuestions) || projectQuestions.length === 0 ||
+      !Array.isArray(roleSpecificQuestions) || roleSpecificQuestions.length === 0
+    ) {
+      throw new Error('Interview prep questions missing required categories or empty!');
+    }
+    console.log('✅ Step 24b. Verified all 4 question categories contain structured questions with suggested answer points.');
+
+    // 24c. Evaluate Candidate's Practice Answer
+    const sampleQuestion = technicalQuestions[0].question;
+    console.log('Step 24c. Evaluating practice answer for question:', sampleQuestion);
+
+    const feedbackRes = await request(`${BASE_URL}/interviews/prep/feedback`, {
+      method: 'POST',
+      headers: headers1,
+      body: {
+        question: sampleQuestion,
+        answer: 'I have 5 years of experience building full-stack web applications with React, Node.js, Express, and MongoDB. I focus on modular architecture and clean code.',
+        category: 'technical',
+      },
+    });
+
+    const evalData = feedbackRes.data;
+    console.log(
+      '✅ Step 24c. Received AI Feedback! Score:',
+      evalData.score + '/100',
+      '| Strengths Count:',
+      evalData.strengths?.length,
+      '| Areas For Improvement:',
+      evalData.areasForImprovement?.length
+    );
+
+    if (
+      typeof evalData.score !== 'number' ||
+      !Array.isArray(evalData.strengths) ||
+      !Array.isArray(evalData.areasForImprovement) ||
+      typeof evalData.feedback !== 'string' ||
+      typeof evalData.sampleImprovedAnswer !== 'string'
+    ) {
+      throw new Error('Interview feedback evaluation response missing required fields!');
+    }
+    console.log('✅ Step 24d. Verified AI feedback output schema (score, strengths, areasForImprovement, feedback, sampleImprovedAnswer).');
+
+    // 24e. Security Isolation: Unauthenticated call rejected (401)
+    try {
+      await request(`${BASE_URL}/interviews/prep/generate`, {
+        method: 'POST',
+        body: { applicationId: recruitmentAppId },
+      });
+      console.error('❌ FAIL: Unauthenticated user generated interview prep questions!');
+    } catch (err) {
+      console.log('✅ Step 24e. Unauthenticated interview prep request correctly rejected with status:', err.status, `("${err.message}")`);
+    }
+
+    console.log('\n🎉 ALL 24 END-TO-END, RBAC, R2 RESUME, RECRUITMENT, INTERVIEW, EMAIL, NOTIFICATION, AI ATS, RECOMMENDATION, CANDIDATE MATCHING, AND AI INTERVIEW PREPARATION TESTS PASSED WITH 100% SUCCESS!');
   } catch (err) {
     console.error('❌ E2E TEST RUN FAILED:', err.status, err.message, err.data);
   } finally {

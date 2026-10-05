@@ -80,3 +80,35 @@ export const getInterviewById = asyncHandler(async (req, res) => {
   );
   return successResponse(res, 200, '', interview);
 });
+
+// @desc    Generate AI-Powered Interview Preparation Questions
+// @route   POST /api/interviews/prep/generate
+// @access  Private (Candidate / Job Seeker / Admin)
+export const generateInterviewPrep = asyncHandler(async (req, res) => {
+  const prepData = await interviewService.generateInterviewPrep(
+    req.user._id,
+    req.body
+  );
+  return successResponse(
+    res,
+    200,
+    'AI Interview Preparation questions generated successfully',
+    prepData
+  );
+});
+
+// @desc    Evaluate Candidate Written Practice Answer using Gemini AI
+// @route   POST /api/interviews/prep/feedback
+// @access  Private (Candidate / Job Seeker / Admin)
+export const evaluateInterviewAnswer = asyncHandler(async (req, res) => {
+  const feedback = await interviewService.evaluateInterviewAnswerService(
+    req.user._id,
+    req.body
+  );
+  return successResponse(
+    res,
+    200,
+    'AI answer feedback evaluated successfully',
+    feedback
+  );
+});
