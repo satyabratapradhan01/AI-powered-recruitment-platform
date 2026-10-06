@@ -482,8 +482,7 @@ const Dashboard = () => {
                   <TableHead>Company</TableHead>
                   <TableHead>Job Title</TableHead>
                   <TableHead>Applied Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -500,15 +499,8 @@ const Dashboard = () => {
                           })
                         : 'N/A'}
                     </TableCell>
-                    <TableCell>
-                      <StatusBadge status={app.status} />
-                    </TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/applications/${app._id}/edit`}>
-                        <Button variant="outline" size="xs">
-                          Edit
-                        </Button>
-                      </Link>
+                      <StatusBadge status={app.status} />
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import Card, { CardContent, CardFooter } from './ui/Card';
 import Button from './ui/Button';
 import ConfirmationDialog from './ui/ConfirmationDialog';
-import { MapPin, Calendar, ExternalLink, Edit3, Trash2 } from 'lucide-react';
+import { MapPin, Calendar, ExternalLink, Trash2 } from 'lucide-react';
 
 const ApplicationCard = ({ application, onDelete, isDeleting = false }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -63,12 +62,7 @@ const ApplicationCard = ({ application, onDelete, isDeleting = false }) => {
           </div>
         </CardContent>
 
-        <CardFooter className="gap-2">
-          <Link to={`/applications/${application._id}/edit`} className="w-full">
-            <Button variant="outline" size="xs" fullWidth leftIcon={Edit3}>
-              Edit
-            </Button>
-          </Link>
+        <CardFooter className="justify-end">
           <Button
             variant="ghost"
             size="xs"
