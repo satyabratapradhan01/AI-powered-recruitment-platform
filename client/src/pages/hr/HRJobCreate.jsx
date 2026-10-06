@@ -25,6 +25,7 @@ const HRJobCreate = () => {
     location: 'Remote - US',
     workMode: 'Remote',
     employmentType: 'Full-time',
+    status: 'Active',
     salaryMin: 120000,
     salaryMax: 160000,
     experienceRequired: '3-5 years',
@@ -46,6 +47,7 @@ const HRJobCreate = () => {
           location: job.location || '',
           workMode: job.workMode || 'Remote',
           employmentType: job.employmentType || 'Full-time',
+          status: job.status || 'Active',
           salaryMin: job.salaryMin || 100000,
           salaryMax: job.salaryMax || 150000,
           experienceRequired: job.experienceRequired || '3-5 years',
@@ -87,6 +89,7 @@ const HRJobCreate = () => {
       location: formData.location,
       workMode: formData.workMode,
       employmentType: formData.employmentType,
+      status: formData.status,
       salaryMin: Number(formData.salaryMin) || 0,
       salaryMax: Number(formData.salaryMax) || 0,
       experienceRequired: formData.experienceRequired,
@@ -158,7 +161,7 @@ const HRJobCreate = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <Input
                 label="Location *"
                 name="location"
@@ -188,6 +191,17 @@ const HRJobCreate = () => {
                   { value: 'Full-time', label: 'Full-time' },
                   { value: 'Part-time', label: 'Part-time' },
                   { value: 'Contract', label: 'Contract' },
+                ]}
+              />
+              <Select
+                label="Job Status *"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                options={[
+                  { value: 'Active', label: 'Active Listing' },
+                  { value: 'Closed', label: 'Closed / Filled' },
+                  { value: 'Draft', label: 'Draft' },
                 ]}
               />
             </div>

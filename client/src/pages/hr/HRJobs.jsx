@@ -11,7 +11,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { SkeletonCard } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
-import { Plus, Search, MapPin, DollarSign, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Search, MapPin, DollarSign, Edit3, Trash2, Lock, Unlock } from 'lucide-react';
 
 const HRJobs = () => {
   const toast = useToast();
@@ -42,6 +42,27 @@ const HRJobs = () => {
     fetchHRJobs();
   }, []);
 
+  const handleToggleJobStatus = async (job) => {
+    const jobId = job._id || job.id;
+    const isCurrentlyClosed = job.status === 'Closed';
+    const newStatus = isCurrentlyClosed ? 'Active' : 'Closed';
+
+    try {
+      await updateJobApi(jobId, { status: newStatus });
+      setJobs((prev) =>
+        prev.map((j) => ((j._id || j.id) === jobId ? { ...j, status: newStatus } : j))
+      );
+      toast.success(
+        isCurrentlyClosed
+          ? `Job listing "${job.title}" has been reopened as Active.`
+          : `Job listing "${job.title}" has been Closed.`
+      );
+    } catch (err) {
+      console.error('Error toggling job status:', err);
+      toast.error(err.response?.data?.message || 'Failed to update job status.');
+    }
+  };
+
   const handleDeleteJob = async () => {
     if (!selectedJobToDelete) return;
     try {
@@ -57,7 +78,8 @@ const HRJobs = () => {
   };
 
   const filteredJobs = jobs.filter((j) => {
-    const statusMatches = activeTab === 'All' || j.status === activeTab;
+    const jobStatus = j.status || 'Active';
+    const statusMatches = activeTab === 'All' || jobStatus === activeTab;
     const query = searchQuery.toLowerCase();
     const queryMatches =
       j.title.toLowerCase().includes(query) ||
@@ -128,6 +150,7 @@ const HRJobs = () => {
           {filteredJobs.map((job) => {
             const jobId = job._id || job.id;
             const requiredSkills = job.requiredSkills || [];
+            const isClosed = job.status === 'Closed';
 
             return (
               <Card key={jobId} variant="default" className="flex flex-col justify-between h-full hover:shadow-md transition">
@@ -137,8 +160,8 @@ const HRJobs = () => {
                       <h3 className="font-bold text-slate-900 text-base">{job.title}</h3>
                       <p className="text-xs font-semibold text-purple-600">{job.department || 'Engineering'}</p>
                     </div>
-                    <Badge variant={job.status === 'Closed' ? 'neutral' : 'success'} showDot size="xs">
-                      {job.status || 'Active'}
+                    <Badge variant={isClosed ? 'neutral' : 'success'} showDot size="xs">
+                      {isClosed ? 'Closed' : 'Active'}
                     </Badge>
                   </div>
 
@@ -169,9 +192,22 @@ const HRJobs = () => {
                 </CardContent>
 
                 <CardFooter className="gap-2">
+                  <Button
+                    variant={isClosed ? 'outline' : 'secondary'}
+                    size="xs"
+                    onClick={() => handleToggleJobStatus(job)}
+                    leftIcon={isClosed ? Unlock : Lock}
+                    className={
+                      isClosed
+                        ? 'text-emerald-700 hover:bg-emerald-50 border-emerald-200 shrink-0'
+                        : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200 shrink-0'
+                    }
+                  >
+                    {isClosed ? 'Reopen' : 'Close Job'}
+                  </Button>
                   <Link to={`/hr/jobs/${jobId}/edit`} className="w-full">
                     <Button variant="outline" size="xs" fullWidth leftIcon={Edit3}>
-                      Edit Job
+                      Edit
                     </Button>
                   </Link>
                   <Button
