@@ -41,8 +41,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // 1. Job Seeker navigation
   const seekerNavItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Find Jobs', path: '/jobs', icon: Search },
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'Find Jobs', path: '/jobs', icon: Search, end: true },
     { label: 'My Applications', path: '/applications', icon: Briefcase },
     { label: 'Resume / ATS', path: '/ats-score', icon: FileCheck2 },
     { label: 'Interviews', path: '/interviews', icon: Calendar },
@@ -53,9 +53,9 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // 2. HR Recruiter navigation
   const hrNavItems = [
-    { label: 'Dashboard', path: '/hr/dashboard', icon: LayoutDashboard },
-    { label: 'My Jobs', path: '/hr/jobs', icon: Briefcase },
-    { label: 'Post Job', path: '/hr/jobs/new', icon: PlusCircle },
+    { label: 'Dashboard', path: '/hr/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'My Jobs', path: '/hr/jobs', icon: Briefcase, end: true },
+    { label: 'Post Job', path: '/hr/jobs/new', icon: PlusCircle, end: true },
     { label: 'Applicants', path: '/hr/applicants', icon: Users },
     { label: 'Interviews', path: '/hr/interviews', icon: Calendar },
     { label: 'Notifications', path: '/hr/notifications', icon: Bell },
@@ -64,9 +64,9 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // 3. Admin navigation
   const adminNavItems = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard, end: true },
     { label: 'Users', path: '/admin/users', icon: Users },
-    { label: 'Jobs', path: '/admin/jobs', icon: Briefcase },
+    { label: 'Jobs', path: '/admin/jobs', icon: Briefcase, end: true },
     { label: 'Applications', path: '/admin/applications', icon: Kanban },
     { label: 'Analytics', path: '/admin/analytics', icon: TrendingUp },
   ];
@@ -174,6 +174,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  end={item.end}
                   onClick={onClose}
                   className={linkClasses}
                 >
