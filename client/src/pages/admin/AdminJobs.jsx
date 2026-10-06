@@ -24,10 +24,6 @@ const AdminJobs = () => {
   const [selectedJob, setSelectedJob] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchAdminJobs();
-  }, []);
-
   const fetchAdminJobs = async () => {
     try {
       setLoading(true);
@@ -41,6 +37,10 @@ const AdminJobs = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAdminJobs();
+  }, []);
 
   const handleDeleteJob = async (jobId, title) => {
     if (!window.confirm(`Are you sure you want to delete job "${title}"?`)) return;

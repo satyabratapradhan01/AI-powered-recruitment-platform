@@ -17,7 +17,6 @@ import Dashboard from './pages/Dashboard';
 import Jobs from './pages/Jobs';
 import JobDetails from './pages/JobDetails';
 import Applications from './pages/Applications';
-import ApplicationNew from './pages/ApplicationNew';
 import ApplicationEdit from './pages/ApplicationEdit';
 import ATSScore from './pages/ATSScore';
 import Interviews from './pages/Interviews';
@@ -68,7 +67,6 @@ function App() {
                   <Route path="/jobs" element={<Jobs />} />
                   <Route path="/jobs/:id" element={<JobDetails />} />
                   <Route path="/applications" element={<Applications />} />
-                  <Route path="/applications/new" element={<ApplicationNew />} />
                   <Route path="/applications/:id/edit" element={<ApplicationEdit />} />
                   <Route path="/ats-score" element={<ATSScore />} />
                   <Route path="/interviews" element={<Interviews />} />

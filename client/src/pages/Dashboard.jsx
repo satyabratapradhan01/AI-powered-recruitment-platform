@@ -94,7 +94,6 @@ const Dashboard = () => {
   const appliedCount = applications.filter((a) => a.status === 'Applied').length;
   const interviewCount = applications.filter((a) => a.status === 'Interview').length;
   const offerCount = applications.filter((a) => a.status === 'Offer').length;
-  const rejectedCount = applications.filter((a) => a.status === 'Rejected').length;
 
   const recentApplications = [...applications]
     .sort(
@@ -150,9 +149,9 @@ const Dashboard = () => {
         </div>
 
         <div className="relative z-10 shrink-0">
-          <Link to="/applications/new">
-            <Button variant="primary" size="md" leftIcon={Plus} className="bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg">
-              New Application
+          <Link to="/jobs">
+            <Button variant="primary" size="md" leftIcon={Briefcase} className="bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg">
+              Explore Jobs
             </Button>
           </Link>
         </div>
@@ -472,9 +471,9 @@ const Dashboard = () => {
           ) : recentApplications.length === 0 ? (
             <EmptyState
               title="No job applications tracked yet"
-              description="Start by adding your active job applications to monitor recruitment responses."
-              actionLabel="Add Your First Application"
-              actionLink="/applications/new"
+              description="Start by applying for active job positions to monitor your recruitment pipeline."
+              actionLabel="Explore Open Positions"
+              actionLink="/jobs"
             />
           ) : (
             <Table>

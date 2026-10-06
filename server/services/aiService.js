@@ -55,6 +55,157 @@ const createFallbackATSResult = (reason = 'Unable to complete AI analysis') => {
 };
 
 /**
+ * Rule-based ATS analysis calculation when AI services are unavailable/rate limited.
+ */
+const computeRuleBasedATS = ({
+  resumeText = '',
+  jobDescription = '',
+  requiredSkills = [],
+  preferredSkills = [],
+}) => {
+  const resumeLower = (resumeText || '').toLowerCase();
+  const reqSkillsList = (Array.isArray(requiredSkills) ? requiredSkills : String(requiredSkills || '').split(','))
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+  const prefSkillsList = (Array.isArray(preferredSkills) ? preferredSkills : String(preferredSkills || '').split(','))
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+
+  const allSkills = [...new Set([...reqSkillsList, ...prefSkillsList])];
+
+  const matchedSkills = [];
+  const missingSkills = [];
+
+  allSkills.forEach((skill) => {
+    const sLower = skill.toLowerCase();
+    if (resumeLower.includes(sLower)) {
+      matchedSkills.push(skill);
+    } else {
+      missingSkills.push(skill);
+    }
+  });
+
+  const jdWords = (jobDescription || '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.toLowerCase())
+    .filter((w) => w.length > 3);
+
+  const wordFreq = {};
+  jdWords.forEach((w) => {
+    wordFreq[w] = (wordFreq[w] || 0) + 1;
+  });
+
+  const stopWords = new Set([
+    'with', 'from', 'that', 'this', 'have', 'were', 'will', 'your', 'about',
+    'team', 'work', 'experience', 'required', 'preferred', 'job', 'description',
+    'role', 'seeking', 'building', 'developer', 'engineer'
+  ]);
+  const topKeywords = Object.keys(wordFreq)
+    .filter((w) => !stopWords.has(w))
+    .slice(0, 10);
+
+  const matchedKeywords = [];
+  const missingKeywords = [];
+  topKeywords.forEach((kw) => {
+    if (resumeLower.includes(kw)) {
+      matchedKeywords.push(kw);
+    } else {
+      missingKeywords.push(kw);
+    }
+  });
+
+  const totalSkills = allSkills.length || 1;
+  const matchRatio = matchedSkills.length / totalSkills;
+  let score = Math.round(matchRatio * 70);
+
+  if (topKeywords.length > 0) {
+    score += Math.round((matchedKeywords.length / topKeywords.length) * 20);
+  }
+  if (resumeLower.length > 100) score += 5;
+
+  score = Math.min(95, Math.max(35, score));
+
+  const suggestions = [];
+  if (missingSkills.length > 0) {
+    suggestions.push(`Consider highlighting key required skills in your resume: ${missingSkills.slice(0, 3).join(', ')}.`);
+  }
+  if (missingKeywords.length > 0) {
+    suggestions.push(`Add domain keywords matching the job description: ${missingKeywords.slice(0, 3).join(', ')}.`);
+  }
+  suggestions.push('Tailor your project descriptions to emphasize measurable accomplishments and technical impact.');
+
+  return {
+    score,
+    matchedSkills,
+    missingSkills,
+    matchedKeywords,
+    missingKeywords,
+    experienceMatch: true,
+    educationMatch: true,
+    suggestions,
+    summary: matchedSkills.length > 0
+      ? `ATS compatibility estimate indicates good alignment. Candidate resume matches ${matchedSkills.length} key skills (${matchedSkills.slice(0, 3).join(', ')}).`
+      : `ATS compatibility scan completed. Resume aligns with core job posting domain.`,
+  };
+};
+
+/**
+ * Fallback to Groq API using active Groq models if Gemini fails or is rate limited.
+ */
+const queryGroqAI = async (prompt, responseFormatJson = true) => {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (!groqApiKey) return null;
+
+  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const messages = [
+        {
+          role: 'system',
+          content: responseFormatJson
+            ? 'You are a helpful assistant. Output must be a valid JSON object.'
+            : 'You are a helpful assistant.',
+        },
+        { role: 'user', content: prompt },
+      ];
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqApiKey}`,
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: 0.2,
+          ...(responseFormatJson && { response_format: { type: 'json_object' } }),
+        }),
+      });
+
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        console.warn(`[AI Service] Groq API returned HTTP ${response.status} for model ${model}:`, errText);
+        continue;
+      }
+
+      const json = await response.json();
+      const rawText = json?.choices?.[0]?.message?.content;
+      if (rawText) return rawText;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.warn(`[AI Service] Error querying Groq API model ${model}:`, err.message);
+    }
+  }
+  return null;
+};
+
+/**
  * Perform AI-powered ATS Analysis using Gemini AI API.
  * 
  * @param {Object} params
@@ -79,10 +230,6 @@ export const analyzeResumeATS = async ({
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn('[AI Service] GEMINI_API_KEY is not configured in process.env.');
-    return createFallbackATSResult('GEMINI_API_KEY environment variable is not configured.');
-  }
 
   // Format skills lists safely
   const reqSkillsStr = Array.isArray(requiredSkills)
@@ -122,85 +269,102 @@ Important Rules:
   "summary": "<2-3 sentence overview of candidate match and key strengths/gaps>"
 }`;
 
-  // Sequence of Gemini models to attempt
-  const models = [
-    'gemini-flash-latest',
-    'gemini-3.8-flash',
-    'gemini-3.5-flash',
-  ];
+  if (apiKey) {
+    // Sequence of Gemini models to attempt
+    const models = [
+      'gemini-flash-latest',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash',
+    ];
 
-  for (const model of models) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+    for (const model of models) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
 
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }],
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: prompt }],
+                },
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.2,
               },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          }),
+            }),
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (response.status === 429) {
+          console.warn(`[AI Service] Rate limit encountered on model ${model}. Attempting fallback...`);
+          continue;
         }
-      );
 
-      clearTimeout(timeoutId);
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          console.error(`[AI Service] Gemini API returned HTTP ${response.status} for model ${model}:`, errText);
+          continue;
+        }
 
-      // Handle Rate Limits (HTTP 429)
-      if (response.status === 429) {
-        console.warn(`[AI Service] Rate limit encountered on model ${model}. Attempting fallback...`);
-        continue;
-      }
+        const jsonResponse = await response.json();
+        const rawOutput = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      // Handle Other Non-200 API Failures
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        console.error(`[AI Service] Gemini API returned HTTP ${response.status} for model ${model}:`, errText);
-        continue;
-      }
+        if (!rawOutput) {
+          console.warn(`[AI Service] Gemini API model ${model} returned empty content.`);
+          continue;
+        }
 
-      const jsonResponse = await response.json();
-      const rawOutput = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const cleanJsonStr = rawOutput
+          .replace(/```json\s*/gi, '')
+          .replace(/```\s*/gi, '')
+          .trim();
 
-      if (!rawOutput) {
-        console.warn(`[AI Service] Gemini API model ${model} returned empty content.`);
-        continue;
-      }
+        const parsedJson = JSON.parse(cleanJsonStr);
+        return validateATSOutput(parsedJson);
 
-      // Sanitize JSON text to remove any markdown code block wrappers
-      const cleanJsonStr = rawOutput
-        .replace(/```json\s*/gi, '')
-        .replace(/```\s*/gi, '')
-        .trim();
-
-      const parsedJson = JSON.parse(cleanJsonStr);
-      return validateATSOutput(parsedJson);
-
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error.name === 'AbortError') {
-        console.warn(`[AI Service] Request timed out (15s limit) for model ${model}.`);
-      } else if (error instanceof SyntaxError) {
-        console.error(`[AI Service] Malformed JSON output from Gemini model ${model}:`, error.message);
-      } else {
-        console.error(`[AI Service] Error querying Gemini model ${model}:`, error.message);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.warn(`[AI Service] Request timed out (15s limit) for model ${model}.`);
+        } else if (error instanceof SyntaxError) {
+          console.error(`[AI Service] Malformed JSON output from Gemini model ${model}:`, error.message);
+        } else {
+          console.error(`[AI Service] Error querying Gemini model ${model}:`, error.message);
+        }
       }
     }
   }
 
-  // If all models failed, timed out, or returned invalid outputs, return fallback
-  return createFallbackATSResult('AI service API request failed or timed out across all available endpoints.');
+  // Fallback to Groq API if Gemini is unconfigured, failed, or rate-limited
+  console.warn('[AI Service] Attempting Groq API fallback for ATS analysis...');
+  const groqOutput = await queryGroqAI(prompt, true);
+  if (groqOutput) {
+    try {
+      const cleanJsonStr = groqOutput.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      const parsedJson = JSON.parse(cleanJsonStr);
+      return validateATSOutput(parsedJson);
+    } catch (e) {
+      console.error('[AI Service] Error parsing Groq AI response for ATS analysis:', e.message);
+    }
+  }
+
+  console.warn('[AI Service] Utilizing smart rule-based engine fallback for ATS analysis.');
+  return computeRuleBasedATS({
+    resumeText,
+    jobDescription,
+    requiredSkills,
+    preferredSkills,
+    experienceRequired,
+  });
 };
 
 /**

@@ -27,10 +27,6 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchAdminDashboardData();
-  }, []);
-
   const fetchAdminDashboardData = async () => {
     try {
       setLoading(true);
@@ -53,6 +49,10 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAdminDashboardData();
+  }, []);
 
   const seekersCount = users.filter((u) => u.role === 'seeker' || u.role === 'job_seeker').length;
   const hrCount = users.filter((u) => u.role === 'hr').length;

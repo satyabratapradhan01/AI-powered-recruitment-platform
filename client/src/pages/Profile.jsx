@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfileApi, uploadResumeApi, deleteResumeApi, getMyResumeApi } from '../services/api';
 import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
@@ -29,7 +29,8 @@ import {
 
 const Profile = () => {
   const toast = useToast();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, updateUser } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -62,14 +63,19 @@ const Profile = () => {
         phone: user.profile?.phone || user.phone || '',
         location: user.profile?.location || user.location || '',
         bio: user.profile?.bio || user.bio || '',
-        skills: user.skills || user.profile?.skills || [],
-        portfolio: user.profile?.portfolio || user.portfolio || '',
+        skills: user.skills || [],
+        portfolio: user.profile?.website || user.profile?.portfolio || user.portfolio || '',
         linkedin: user.profile?.linkedin || user.linkedin || '',
         github: user.profile?.github || user.github || '',
-        education: user.education || user.profile?.education || [],
-        experience: user.experience || user.profile?.experience || [],
+        education: user.education || [],
+        experience: user.experience || [],
       });
-      setResumeData(user.resume || null);
+      if (user.resume && (user.resume.fileKey || user.resume.fileName)) {
+        setResumeData(user.resume);
+        if (user.resume.fileUrl) {
+          setResumeSignedUrl(user.resume.fileUrl);
+        }
+      }
     }
     fetchMyResume();
   }, [user]);
@@ -77,9 +83,12 @@ const Profile = () => {
   const fetchMyResume = async () => {
     try {
       const res = await getMyResumeApi();
-      if (res.data?.data) {
-        setResumeData(res.data.data.resume);
-        setResumeSignedUrl(res.data.data.signedUrl);
+      const resData = res.data?.data;
+      if (resData) {
+        const resumeObj = resData.resume || resData;
+        const signedUrl = resData.signedUrl || resData.fileUrl;
+        setResumeData(resumeObj);
+        setResumeSignedUrl(signedUrl);
       }
     } catch (err) {
       // resume may not be uploaded yet
@@ -127,9 +136,12 @@ const Profile = () => {
 
       const res = await uploadResumeApi(data);
       toast.success(res.data?.message || 'Resume uploaded successfully!');
-      if (res.data?.data) {
-        setResumeData(res.data.data.resume);
-        setResumeSignedUrl(res.data.data.signedUrl);
+      const resData = res.data?.data;
+      if (resData) {
+        const resumeObj = resData.resume || resData;
+        const signedUrl = resData.signedUrl || resData.fileUrl;
+        setResumeData(resumeObj);
+        setResumeSignedUrl(signedUrl);
       }
       await refreshUser();
     } catch (err) {
@@ -137,6 +149,9 @@ const Profile = () => {
       toast.error(err.response?.data?.message || 'Failed to upload resume');
     } finally {
       setUploadingResume(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -165,14 +180,28 @@ const Profile = () => {
         bio: formData.bio,
         skills: formData.skills,
         portfolio: formData.portfolio,
+        website: formData.portfolio,
         linkedin: formData.linkedin,
         github: formData.github,
         education: formData.education,
         experience: formData.experience,
+        profile: {
+          headline: formData.headline,
+          phone: formData.phone,
+          location: formData.location,
+          bio: formData.bio,
+          website: formData.portfolio,
+          portfolio: formData.portfolio,
+          linkedin: formData.linkedin,
+          github: formData.github,
+        },
       };
 
       const res = await updateProfileApi(payload);
       toast.success(res.data?.message || 'Profile updated successfully!');
+      if (res.data?.data) {
+        updateUser(res.data.data);
+      }
       await refreshUser();
     } catch (err) {
       console.error('Error saving profile:', err);
@@ -313,24 +342,23 @@ const Profile = () => {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleResumeFileUpload}
-                  className="hidden"
-                  disabled={uploadingResume}
-                />
-                <Button
-                  variant="outline"
-                  size="xs"
-                  isLoading={uploadingResume}
-                  leftIcon={Upload}
-                  as="span"
-                >
-                  {resumeData ? 'Replace Resume' : 'Upload Resume'}
-                </Button>
-              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleResumeFileUpload}
+                className="hidden"
+                disabled={uploadingResume}
+              />
+              <Button
+                variant="outline"
+                size="xs"
+                isLoading={uploadingResume}
+                leftIcon={Upload}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {resumeData ? 'Replace Resume' : 'Upload Resume'}
+              </Button>
 
               {resumeSignedUrl && (
                 <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer">

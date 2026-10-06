@@ -16,6 +16,19 @@ import { analyzeResumeATS } from './aiService.js';
 export const createApplication = async (userId, data) => {
   const { jobId, company, jobTitle, location, jobUrl, coverLetter, resume, status, appliedDate } = data;
 
+  const candidateUser = await User.findById(userId);
+
+  // Use passed resume or pull candidate's default uploaded resume metadata
+  let resumeData = resume;
+  if ((!resumeData || !resumeData.parsedText) && candidateUser && candidateUser.resume && candidateUser.resume.parsedText) {
+    resumeData = {
+      fileUrl: candidateUser.resume.fileUrl,
+      fileName: candidateUser.resume.fileName,
+      fileKey: candidateUser.resume.fileKey,
+      parsedText: candidateUser.resume.parsedText,
+    };
+  }
+
   let application;
 
   // 1. If applying for a platform Job Posting (jobId provided)
@@ -37,19 +50,6 @@ export const createApplication = async (userId, data) => {
 
     if (existingApp) {
       throw new AppError('You have already applied for this job posting', 400);
-    }
-
-    const candidateUser = await User.findById(userId);
-
-    // Use passed resume or pull candidate's default uploaded resume metadata
-    let resumeData = resume;
-    if (!resumeData && candidateUser && candidateUser.resume && candidateUser.resume.fileKey) {
-      resumeData = {
-        fileUrl: candidateUser.resume.fileUrl,
-        fileName: candidateUser.resume.fileName,
-        fileKey: candidateUser.resume.fileKey,
-        parsedText: candidateUser.resume.parsedText,
-      };
     }
 
     application = await JobApplication.create({
@@ -91,6 +91,17 @@ export const createApplication = async (userId, data) => {
       relatedApplicationId: application._id,
     });
 
+    // Create in-app notification for HR recruiter
+    if (job.postedBy) {
+      await createNotification({
+        userId: job.postedBy,
+        type: 'new_applicant',
+        title: 'New Applicant Submission',
+        message: `${candidateUser?.name || 'A candidate'} submitted an application for ${job.title}${application.atsScore ? ` with ${application.atsScore}% AI ATS Match.` : '.'}`,
+        relatedApplicationId: application._id,
+      });
+    }
+
     // Trigger email notification to candidate
     if (candidateUser && candidateUser.email) {
       sendApplicationSubmittedEmail({
@@ -104,7 +115,7 @@ export const createApplication = async (userId, data) => {
     return application;
   }
 
-  // 2. Legacy custom tracker application entry (no jobId provided)
+  // 2. Custom application entry (no jobId provided)
   application = await JobApplication.create({
     candidateId: userId,
     userId,
@@ -113,11 +124,27 @@ export const createApplication = async (userId, data) => {
     location: location || '',
     jobUrl: jobUrl || '',
     coverLetter: coverLetter || '',
-    resume: resume || {},
+    resume: resumeData || {},
     status: status || 'Applied',
     appliedDate: appliedDate ? new Date(appliedDate) : new Date(),
     appliedAt: new Date(),
   });
+
+  // Automatically run initial ATS analysis for custom entry if resume text is present
+  if (resumeData?.parsedText) {
+    try {
+      const atsResult = await analyzeResumeATS({
+        resumeText: resumeData.parsedText,
+        jobDescription: `${company} - ${jobTitle} position requirements and responsibilities.`,
+        requiredSkills: candidateUser?.skills || [],
+        preferredSkills: [],
+        experienceRequired: 'Software development experience',
+      });
+      application.atsScore = atsResult.score;
+      application.atsAnalysis = atsResult;
+      await application.save();
+    } catch (_) {}
+  }
 
   return application;
 };
@@ -177,6 +204,7 @@ export const getApplications = async (userId, userRole, queryParams = {}) => {
   const query = {
     $or: [{ candidateId: userId }, { userId }],
   };
+  if (jobId) query.jobId = jobId;
   if (status) query.status = status;
 
   return await JobApplication.find(query)
@@ -408,16 +436,32 @@ export const triggerATSAnalysis = async (id, userId, userRole) => {
     throw new AppError('Forbidden: Access denied to trigger ATS analysis on this application', 403);
   }
 
-  const resumeText =
+  const candidateUser = await User.findById(
+    application.candidateId?._id || application.candidateId || application.userId || userId
+  );
+
+  let resumeText =
     application.resume?.parsedText ||
-    application.candidateId?.resume?.parsedText ||
+    candidateUser?.resume?.parsedText ||
     '';
 
+  if ((!application.resume || !application.resume.parsedText) && candidateUser && candidateUser.resume) {
+    application.resume = {
+      fileUrl: candidateUser.resume.fileUrl,
+      fileName: candidateUser.resume.fileName,
+      fileKey: candidateUser.resume.fileKey,
+      parsedText: candidateUser.resume.parsedText,
+    };
+    resumeText = candidateUser.resume.parsedText || '';
+  }
+
   const job = application.jobId || {};
-  const jobDescription = job.description || `${application.company} ${application.jobTitle}`;
-  const requiredSkills = job.requiredSkills || [];
+  const jobDescription = job.description || `${application.company} ${application.jobTitle} position requirements and responsibilities.`;
+  const requiredSkills = job.requiredSkills && job.requiredSkills.length > 0
+    ? job.requiredSkills
+    : (candidateUser?.skills || []);
   const preferredSkills = job.preferredSkills || [];
-  const experienceRequired = job.experienceRequired || '';
+  const experienceRequired = job.experienceRequired || 'Software development experience';
 
   const atsResult = await analyzeResumeATS({
     resumeText,

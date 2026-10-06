@@ -17,7 +17,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { SkeletonCard } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
-import { Calendar, Clock, Video, User, Plus, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, Clock, Video, User, Plus, ExternalLink } from 'lucide-react';
 
 const HRInterviews = () => {
   const toast = useToast();
@@ -30,7 +30,7 @@ const HRInterviews = () => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [scheduleForm, setScheduleForm] = useState({
+  const [scheduleForm, setScheduleForm] = useState(() => ({
     applicationId: '',
     interviewDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     interviewTime: '11:00 AM EST',
@@ -39,11 +39,7 @@ const HRInterviews = () => {
     meetingLink: 'https://meet.google.com/abc-defg-hij',
     interviewerName: 'Technical Lead & HR Manager',
     notes: 'Focus on technical architecture and cultural fit.',
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  }));
 
   const fetchData = async () => {
     try {
@@ -73,6 +69,10 @@ const HRInterviews = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
@@ -306,11 +306,18 @@ const HRInterviews = () => {
             />
           </div>
 
-          <Input
+          <Select
             label="Interview Format / Type"
-            placeholder="e.g. System Design / Technical Screening"
             value={scheduleForm.interviewType}
             onChange={(e) => setScheduleForm({ ...scheduleForm, interviewType: e.target.value })}
+            options={[
+              { value: 'Technical', label: 'Technical Round' },
+              { value: 'System Design & Technical Screen', label: 'System Design & Technical Screen' },
+              { value: 'HR / Screening', label: 'HR / Initial Screening' },
+              { value: 'Managerial', label: 'Managerial Round' },
+              { value: 'Behavioral', label: 'Behavioral Interview' },
+              { value: 'Final Round', label: 'Final Leadership Round' },
+            ]}
           />
 
           <Input

@@ -11,7 +11,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { SkeletonCard } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
-import { Plus, Search, MapPin, DollarSign, Users, Edit3, Trash2 } from 'lucide-react';
+import { Plus, Search, MapPin, DollarSign, Edit3, Trash2 } from 'lucide-react';
 
 const HRJobs = () => {
   const toast = useToast();
@@ -24,10 +24,6 @@ const HRJobs = () => {
   const [selectedJobToDelete, setSelectedJobToDelete] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchHRJobs();
-  }, []);
-
   const fetchHRJobs = async () => {
     try {
       setLoading(true);
@@ -36,11 +32,15 @@ const HRJobs = () => {
       setJobs(res.data?.data || []);
     } catch (err) {
       console.error('Error fetching HR jobs:', err);
-      setError(err.response?.data?.message || 'Failed to load posted job listings');
+      setError(err.response?.data?.message || 'Failed to load job postings');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchHRJobs();
+  }, []);
 
   const handleDeleteJob = async () => {
     if (!selectedJobToDelete) return;

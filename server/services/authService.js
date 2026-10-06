@@ -99,17 +99,37 @@ export const updateUserProfile = async (userId, updateData) => {
     throw new AppError('User not found', 404);
   }
 
-  // Allow updating user profile fields
   if (updateData.name !== undefined) user.name = updateData.name;
-  if (updateData.profile !== undefined) {
-    user.profile = { ...user.profile, ...updateData.profile };
-  }
-  if (updateData.skills !== undefined) user.skills = updateData.skills;
-  if (updateData.education !== undefined) user.education = updateData.education;
-  if (updateData.experience !== undefined) user.experience = updateData.experience;
+  if (updateData.skills !== undefined && Array.isArray(updateData.skills)) user.skills = updateData.skills;
+  if (updateData.education !== undefined && Array.isArray(updateData.education)) user.education = updateData.education;
+  if (updateData.experience !== undefined && Array.isArray(updateData.experience)) user.experience = updateData.experience;
+  
   if (updateData.resume !== undefined) {
-    user.resume = { ...user.resume, ...updateData.resume };
+    user.resume = { ...(user.resume?.toObject ? user.resume.toObject() : user.resume || {}), ...updateData.resume };
+    user.markModified('resume');
   }
+
+  if (!user.profile) {
+    user.profile = {};
+  }
+
+  const existingProfile = user.profile.toObject ? user.profile.toObject() : user.profile;
+  const mergedProfile = { ...existingProfile };
+
+  if (updateData.profile && typeof updateData.profile === 'object') {
+    Object.assign(mergedProfile, updateData.profile);
+  }
+
+  const profileKeys = ['headline', 'bio', 'description', 'phone', 'location', 'website', 'portfolio', 'github', 'linkedin', 'companyName', 'industry', 'teamSize', 'recruiterEmail'];
+  profileKeys.forEach((key) => {
+    if (updateData[key] !== undefined) {
+      const dbKey = key === 'portfolio' ? 'website' : key;
+      mergedProfile[dbKey] = updateData[key];
+    }
+  });
+
+  user.profile = mergedProfile;
+  user.markModified('profile');
 
   const updatedUser = await user.save();
   const userObj = updatedUser.toObject();

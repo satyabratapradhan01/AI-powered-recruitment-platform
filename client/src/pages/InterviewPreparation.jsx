@@ -13,18 +13,13 @@ import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import {
   Sparkles,
   BookOpen,
-  Send,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
-  MessageSquare,
   Award,
-  RefreshCw,
   Lightbulb,
   ChevronDown,
   ChevronUp,
   Brain,
-  Layers,
 } from 'lucide-react';
 
 const InterviewPreparation = () => {
@@ -43,10 +38,6 @@ const InterviewPreparation = () => {
 
   const [expandedHints, setExpandedHints] = useState({});
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
   const fetchApplications = async () => {
     try {
       setAppLoading(true);
@@ -62,6 +53,10 @@ const InterviewPreparation = () => {
       setAppLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
 
   const handleGeneratePrep = async () => {
     try {
@@ -122,8 +117,6 @@ const InterviewPreparation = () => {
     }
   };
 
-  const selectedApp = applications.find((a) => a._id === selectedAppId);
-
   const categoryTabs = [
     { id: 'technical', label: 'Technical Questions', key: 'technicalQuestions', count: prepData?.technicalQuestions?.length || 0 },
     { id: 'hr', label: 'HR / Behavioral', key: 'hrQuestions', count: prepData?.hrQuestions?.length || 0 },
@@ -164,8 +157,8 @@ const InterviewPreparation = () => {
             <EmptyState
               title="No submitted applications found"
               description="You need to submit at least one job application before generating AI interview preparation."
-              actionLabel="Submit First Application"
-              actionLink="/applications/new"
+              actionLabel="Browse Open Positions"
+              actionLink="/jobs"
             />
           ) : (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">

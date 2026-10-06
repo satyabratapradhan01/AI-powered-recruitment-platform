@@ -56,12 +56,16 @@ const userSchema = new mongoose.Schema(
     profile: {
       headline: { type: String, trim: true, default: '' },
       bio: { type: String, trim: true, default: '' },
+      description: { type: String, trim: true, default: '' },
       phone: { type: String, trim: true, default: '' },
       location: { type: String, trim: true, default: '' },
       website: { type: String, trim: true, default: '' },
       github: { type: String, trim: true, default: '' },
       linkedin: { type: String, trim: true, default: '' },
       companyName: { type: String, trim: true, default: '' },
+      industry: { type: String, trim: true, default: '' },
+      teamSize: { type: String, trim: true, default: '' },
+      recruiterEmail: { type: String, trim: true, default: '' },
     },
     skills: [
       {

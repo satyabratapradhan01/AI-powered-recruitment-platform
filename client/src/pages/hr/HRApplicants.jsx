@@ -17,19 +17,15 @@ import Avatar from '../../components/ui/Avatar';
 import Textarea from '../../components/ui/Textarea';
 import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
-import { SkeletonCard, SkeletonTable } from '../../components/ui/SkeletonLoader';
+import { SkeletonTable } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
 import {
   Search,
   Sparkles,
-  CheckCircle2,
   FileText,
   Eye,
-  GraduationCap,
-  Briefcase,
   Save,
   ExternalLink,
-  SortAsc,
 } from 'lucide-react';
 
 const HRApplicants = () => {
@@ -53,10 +49,6 @@ const HRApplicants = () => {
   const [matchingLoading, setMatchingLoading] = useState(false);
   const [candidateMatches, setCandidateMatches] = useState([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -76,6 +68,10 @@ const HRApplicants = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleRunAICandidateMatching = async (jobId) => {
     if (!jobId || jobId === 'All') return;
@@ -150,7 +146,7 @@ const HRApplicants = () => {
         if (res.data?.data?.signedUrl) {
           setResumeSignedUrl(res.data.data.signedUrl);
         }
-      } catch (err) {
+      } catch (_) {
         // resume may not exist
       }
     }

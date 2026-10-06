@@ -77,6 +77,7 @@ export const uploadResume = async (userId, file) => {
 
   return {
     fileUrl: user.resume.fileUrl,
+    signedUrl: user.resume.fileUrl,
     fileName: user.resume.fileName,
     fileKey: user.resume.fileKey,
     uploadedAt: user.resume.uploadedAt,
@@ -84,6 +85,7 @@ export const uploadResume = async (userId, file) => {
     mimeType: user.resume.mimeType,
     parsedTextPreview: parsedText.substring(0, 200),
     parsedTextLength: parsedText.length,
+    resume: user.resume,
   };
 };
 
@@ -126,10 +128,12 @@ export const getResumeViewUrl = async (targetUserId, currentUser) => {
   return {
     fileName: targetUser.resume.fileName,
     fileUrl: signedUrl,
+    signedUrl: signedUrl,
     uploadedAt: targetUser.resume.uploadedAt,
     fileSize: targetUser.resume.fileSize,
     mimeType: targetUser.resume.mimeType,
     parsedText: targetUser.resume.parsedText,
+    resume: targetUser.resume,
   };
 };
 

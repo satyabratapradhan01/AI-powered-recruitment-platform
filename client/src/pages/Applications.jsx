@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { getApplicationsApi, deleteApplicationApi } from '../services/api';
 import ApplicationCard from '../components/ApplicationCard';
 import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
 import Tabs from '../components/ui/Tabs';
 import Pagination from '../components/ui/Pagination';
@@ -11,7 +10,7 @@ import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import { useToast } from '../context/ToastContext';
-import { Search, Plus, Filter, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, LayoutGrid, List } from 'lucide-react';
 
 const Applications = () => {
   const toast = useToast();
@@ -118,14 +117,9 @@ const Applications = () => {
             Job Applications
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage your recruitment pipeline, track application statuses, and edit listings.
+            Manage your recruitment pipeline and track application statuses.
           </p>
         </div>
-        <Link to="/applications/new">
-          <Button variant="primary" size="md" leftIcon={Plus}>
-            Add Application
-          </Button>
-        </Link>
       </div>
 
       {/* Tabs Filter Bar */}
@@ -201,11 +195,11 @@ const Applications = () => {
           title="No job applications found"
           description={
             applications.length === 0
-              ? "You haven't logged any job applications yet."
+              ? "You haven't submitted any job applications yet."
               : 'No applications match your current search or status filter.'
           }
-          actionLabel={applications.length === 0 ? 'Create First Application' : undefined}
-          actionLink={applications.length === 0 ? '/applications/new' : undefined}
+          actionLabel={applications.length === 0 ? 'Browse Open Positions' : undefined}
+          actionLink={applications.length === 0 ? '/jobs' : undefined}
         />
       ) : (
         <div className="space-y-6">

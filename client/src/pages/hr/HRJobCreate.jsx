@@ -7,7 +7,7 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
-import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, Calendar, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, CheckCircle2 } from 'lucide-react';
 
 const HRJobCreate = () => {
   const { id } = useParams();
@@ -32,12 +32,6 @@ const HRJobCreate = () => {
     preferredSkills: '',
     description: '',
   });
-
-  useEffect(() => {
-    if (isEditMode) {
-      fetchJobDetails();
-    }
-  }, [id]);
 
   const fetchJobDetails = async () => {
     try {
@@ -67,6 +61,12 @@ const HRJobCreate = () => {
       setLoadingJob(false);
     }
   };
+
+  useEffect(() => {
+    if (isEditMode) {
+      fetchJobDetails();
+    }
+  }, [id, isEditMode]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

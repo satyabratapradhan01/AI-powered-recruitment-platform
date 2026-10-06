@@ -14,9 +14,16 @@ const RoleGuard = ({ allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = user.role || 'seeker';
+  const rawRole = user.role || 'seeker';
+  const normalizedRole = rawRole === 'job_seeker' ? 'seeker' : rawRole;
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+  const isAllowed =
+    allowedRoles.length === 0 ||
+    allowedRoles.includes(rawRole) ||
+    allowedRoles.includes(normalizedRole) ||
+    (allowedRoles.includes('seeker') && (rawRole === 'job_seeker' || rawRole === 'seeker'));
+
+  if (!isAllowed) {
     return <Navigate to="/unauthorized" replace />;
   }
 

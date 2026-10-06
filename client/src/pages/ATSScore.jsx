@@ -9,17 +9,14 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import EmptyState from '../components/ui/EmptyState';
-import ErrorState from '../components/ui/ErrorState';
 import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import { useToast } from '../context/ToastContext';
 import {
   FileText,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
   RefreshCw,
   Check,
-  XCircle,
   ExternalLink,
 } from 'lucide-react';
 
@@ -33,10 +30,6 @@ const ATSScore = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [resumeInfo, setResumeInfo] = useState(null);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
   const fetchInitialData = async () => {
     try {
       setLoading(true);
@@ -47,7 +40,6 @@ const ATSScore = () => {
         setSelectedAppId(list[0]._id);
         setSelectedApp(list[0]);
       }
-
       const resumeRes = await getMyResumeApi();
       setResumeInfo(resumeRes.data?.data || null);
     } catch (err) {
@@ -56,6 +48,10 @@ const ATSScore = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
 
   const handleSelectApplication = (appId) => {
     setSelectedAppId(appId);

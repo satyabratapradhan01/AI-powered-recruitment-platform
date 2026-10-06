@@ -30,10 +30,6 @@ const AdminUsers = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -47,6 +43,10 @@ const AdminUsers = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleToggleUserStatus = async () => {
     if (!selectedUser) return;

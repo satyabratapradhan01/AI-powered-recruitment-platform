@@ -32,14 +32,7 @@ const interviewSchema = new mongoose.Schema(
     },
     interviewType: {
       type: String,
-      enum: [
-        'Technical',
-        'HR / Screening',
-        'Managerial',
-        'System Design',
-        'Behavioral',
-        'Final Round',
-      ],
+      trim: true,
       default: 'Technical',
     },
     meetingLink: {

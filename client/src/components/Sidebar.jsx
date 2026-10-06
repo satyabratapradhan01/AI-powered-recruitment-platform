@@ -25,6 +25,10 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
 
   const userRole = user?.role || 'seeker';
+  const isCandidateUser = userRole === 'job_seeker' || userRole === 'seeker';
+  const isHRUser = userRole === 'hr';
+  const isAdminUser = userRole === 'admin';
+
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isHRRoute = location.pathname.startsWith('/hr');
 
@@ -117,30 +121,47 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Role Switcher Bar */}
           <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
-            <NavLink
-              to="/dashboard"
-              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                activeRole === 'seeker' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Candidate
-            </NavLink>
-            <NavLink
-              to="/hr/dashboard"
-              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                activeRole === 'hr' ? 'bg-purple-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              HR
-            </NavLink>
-            <NavLink
-              to="/admin/dashboard"
-              className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                activeRole === 'admin' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Admin
-            </NavLink>
+            {/* Candidate Tab (Visible to Candidate or Admin) */}
+            {(isCandidateUser || isAdminUser) && (
+              <NavLink
+                to="/dashboard"
+                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
+                  activeRole === 'seeker'
+                    ? 'bg-white text-indigo-600 shadow-xs font-black'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Candidate
+              </NavLink>
+            )}
+
+            {/* HR Tab (Visible to HR or Admin) */}
+            {(isHRUser || isAdminUser) && (
+              <NavLink
+                to="/hr/dashboard"
+                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
+                  activeRole === 'hr'
+                    ? 'bg-purple-600 text-white shadow-xs font-black'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                HR
+              </NavLink>
+            )}
+
+            {/* Admin Tab (Visible to Admin only) */}
+            {isAdminUser && (
+              <NavLink
+                to="/admin/dashboard"
+                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
+                  activeRole === 'admin'
+                    ? 'bg-slate-900 text-white shadow-xs font-black'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Admin
+              </NavLink>
+            )}
           </div>
 
           <div className="space-y-1">

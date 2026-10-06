@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import Card, { CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { updateProfileApi } from '../../services/api';
+import Card, { CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import Button from '../../components/ui/Button';
@@ -8,29 +10,56 @@ import { Building2, Globe, MapPin, Users, Mail, Save } from 'lucide-react';
 
 const HRCompanyProfile = () => {
   const toast = useToast();
+  const { user, updateUser, refreshUser } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
-    companyName: 'Stripe',
-    industry: 'Financial Technology / Payments',
-    website: 'https://stripe.com',
-    location: 'San Francisco, CA',
-    teamSize: '5,000+ Employees',
-    recruiterEmail: 'sarah.jenkins@stripe.com',
-    description:
-      'Stripe is a financial infrastructure platform for businesses. Millions of companies—from the world’s largest enterprises to the most ambitious startups—use Stripe to accept payments, grow their revenue, and accelerate new business opportunities.',
+    companyName: '',
+    industry: '',
+    website: '',
+    location: '',
+    teamSize: '',
+    recruiterEmail: '',
+    description: '',
   });
+
+  useEffect(() => {
+    if (user) {
+      const p = user.profile || {};
+      setForm({
+        companyName: p.companyName || '',
+        industry: p.industry || '',
+        website: p.website || '',
+        location: p.location || '',
+        teamSize: p.teamSize || '',
+        recruiterEmail: p.recruiterEmail || user.email || '',
+        description: p.description || p.bio || '',
+      });
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const response = await updateProfileApi(form);
+      const updatedUser = response.data?.data;
+      if (updatedUser) {
+        updateUser(updatedUser);
+      } else {
+        await refreshUser();
+      }
       toast.success('Company profile updated successfully!');
-    }, 800);
+    } catch (err) {
+      console.error('Failed to update company profile:', err);
+      toast.error(err.response?.data?.message || 'Failed to update company profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
