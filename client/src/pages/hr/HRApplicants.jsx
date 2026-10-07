@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getApplicationsApi,
   updateApplicationApi,
@@ -26,10 +27,12 @@ import {
   Eye,
   Save,
   ExternalLink,
+  Award,
 } from 'lucide-react';
 
 const HRApplicants = () => {
   const toast = useToast();
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [selectedJobFilter, setSelectedJobFilter] = useState('All');
@@ -354,6 +357,18 @@ const HRApplicants = () => {
             <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-wrap items-center justify-between gap-2">
               <span className="font-bold text-slate-800">Pipeline Status Action:</span>
               <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="xs"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  leftIcon={Award}
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    navigate('/hr/offers', { state: { preselectAppId: selectedApplicant._id } });
+                  }}
+                >
+                  Provide Offer Letter
+                </Button>
                 <Button
                   variant="outline"
                   size="xs"

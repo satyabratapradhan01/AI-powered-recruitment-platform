@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema(
     },
     accountStatus: {
       type: String,
-      enum: ['active', 'deactivated', 'suspended'],
+      enum: ['active', 'pending', 'deactivated', 'suspended'],
       default: 'active',
     },
     profile: {

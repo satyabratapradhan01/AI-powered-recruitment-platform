@@ -78,6 +78,8 @@ export const updateApplicationApi = (id, data) => api.put(`/applications/${id}`,
 export const withdrawApplicationApi = (id) => api.put(`/applications/${id}/withdraw`);
 export const deleteApplicationApi = (id) => api.delete(`/applications/${id}`);
 export const triggerATSAnalysisApi = (id) => api.post(`/applications/${id}/ats-analysis`);
+export const sendOfferLetterApi = (id, data) => api.post(`/applications/${id}/offer`, data);
+export const respondToOfferLetterApi = (id, data) => api.put(`/applications/${id}/offer/respond`, data);
 
 /* ==========================================================================
    5. INTERVIEWS API SERVICES

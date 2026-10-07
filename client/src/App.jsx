@@ -24,11 +24,14 @@ import InterviewPreparation from './pages/InterviewPreparation';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 
+import CandidateOffers from './pages/CandidateOffers';
+
 // HR Recruiter Pages
 import HRDashboard from './pages/hr/HRDashboard';
 import HRJobs from './pages/hr/HRJobs';
 import HRJobCreate from './pages/hr/HRJobCreate';
 import HRApplicants from './pages/hr/HRApplicants';
+import HROfferLetters from './pages/hr/HROfferLetters';
 import HRInterviews from './pages/hr/HRInterviews';
 import HRNotifications from './pages/hr/HRNotifications';
 import HRCompanyProfile from './pages/hr/HRCompanyProfile';
@@ -68,6 +71,7 @@ function App() {
                   <Route path="/jobs/:id" element={<JobDetails />} />
                   <Route path="/applications" element={<Applications />} />
                   <Route path="/applications/:id/edit" element={<ApplicationEdit />} />
+                  <Route path="/offers" element={<CandidateOffers />} />
                   <Route path="/ats-score" element={<ATSScore />} />
                   <Route path="/interviews" element={<Interviews />} />
                   <Route path="/interview-preparation" element={<InterviewPreparation />} />
@@ -82,6 +86,7 @@ function App() {
                   <Route path="/hr/jobs/new" element={<HRJobCreate />} />
                   <Route path="/hr/jobs/:id/edit" element={<HRJobCreate />} />
                   <Route path="/hr/applicants" element={<HRApplicants />} />
+                  <Route path="/hr/offers" element={<HROfferLetters />} />
                   <Route path="/hr/interviews" element={<HRInterviews />} />
                   <Route path="/hr/notifications" element={<HRNotifications />} />
                   <Route path="/hr/company-profile" element={<HRCompanyProfile />} />

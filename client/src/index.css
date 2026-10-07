@@ -118,3 +118,54 @@
     transform: none !important;
   }
 }
+
+/* ==========================================================================
+   OFFICIAL OFFER LETTER PRINT & PDF STYLES
+   ========================================================================== */
+@media print {
+  /* Hide all website chrome, navigation, headers, sidebars, buttons, modals backdrop */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Make only the printable document visible */
+  .printable-offer-document,
+  .printable-offer-document * {
+    visibility: visible !important;
+  }
+
+  .printable-offer-document {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 24px 32px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .no-print,
+  button,
+  nav,
+  aside,
+  header,
+  .no-print-area {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}
+

@@ -17,6 +17,14 @@ const normalizeArrayField = (val) => {
 };
 
 export const createJob = async (userId, data) => {
+  const posterUser = await User.findById(userId);
+  if (posterUser && posterUser.role === 'hr' && posterUser.accountStatus !== 'active') {
+    throw new AppError(
+      'Your HR Recruiter account is currently pending Administrator approval. You will be able to post jobs once an Administrator approves your account.',
+      403
+    );
+  }
+
   const {
     title,
     company,

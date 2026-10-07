@@ -102,3 +102,40 @@ export const triggerATSAnalysis = asyncHandler(async (req, res) => {
     application
   );
 });
+
+// @desc    Send / Issue Offer Letter to candidate
+// @route   POST /api/applications/:id/offer
+// @access  Private (HR / Admin)
+export const sendOfferLetter = asyncHandler(async (req, res) => {
+  const application = await applicationService.sendOfferLetter(
+    req.params.id,
+    req.user._id,
+    req.user.role,
+    req.body
+  );
+  return successResponse(
+    res,
+    200,
+    'Offer letter sent to candidate successfully!',
+    application
+  );
+});
+
+// @desc    Candidate responds to offer letter (Accept / Reject)
+// @route   PUT /api/applications/:id/offer/respond
+// @access  Private (Candidate / Admin)
+export const respondToOfferLetter = asyncHandler(async (req, res) => {
+  const application = await applicationService.respondToOfferLetter(
+    req.params.id,
+    req.user._id,
+    req.user.role,
+    req.body
+  );
+  return successResponse(
+    res,
+    200,
+    `Offer letter ${req.body.response} successfully!`,
+    application
+  );
+});
+

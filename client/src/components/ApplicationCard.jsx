@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import StatusBadge from './StatusBadge';
 import Card, { CardContent, CardFooter } from './ui/Card';
 import Button from './ui/Button';
@@ -57,6 +58,16 @@ const ApplicationCard = ({ application, onDelete, isDeleting = false }) => {
                   <span>Job Posting</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
+              </div>
+            )}
+            {application.offerDetails && application.offerDetails.offerStatus !== 'None' && (
+              <div className="pt-2">
+                <Link
+                  to="/offers"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold hover:bg-purple-100 transition"
+                >
+                  <span>🎉 View Offer Letter</span>
+                </Link>
               </div>
             )}
           </div>

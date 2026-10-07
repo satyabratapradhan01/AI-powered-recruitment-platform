@@ -9,6 +9,7 @@ import Avatar from '../../components/ui/Avatar';
 import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { SkeletonCard, SkeletonTable } from '../../components/ui/SkeletonLoader';
+import { useAuth } from '../../context/AuthContext';
 import {
   Briefcase,
   Users,
@@ -22,11 +23,14 @@ import {
 } from 'lucide-react';
 
 const HRDashboard = () => {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const isHRPending = user?.role === 'hr' && user?.accountStatus === 'pending';
 
   useEffect(() => {
     fetchHRDashboardData();
@@ -109,12 +113,30 @@ const HRDashboard = () => {
 
         <div className="relative z-10 shrink-0 flex items-center gap-3">
           <Link to="/hr/jobs/new">
-            <Button variant="primary" size="md" leftIcon={Plus} className="bg-purple-600 hover:bg-purple-500 text-white shadow-lg">
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={Plus}
+              disabled={isHRPending}
+              className={`text-white shadow-lg ${isHRPending ? 'bg-slate-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'}`}
+            >
               Create New Job
             </Button>
           </Link>
         </div>
       </div>
+
+      {isHRPending && (
+        <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center gap-3 text-amber-950 text-xs font-semibold shadow-xs">
+          <Clock className="w-6 h-6 text-amber-600 shrink-0" />
+          <div>
+            <p className="font-extrabold text-sm text-amber-950">Registration Pending Administrator Approval</p>
+            <p className="text-amber-800">
+              Welcome to TalentAI! Your HR Recruiter account registration is currently undergoing Admin review. Once an Administrator approves your account, you will be able to post job openings.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

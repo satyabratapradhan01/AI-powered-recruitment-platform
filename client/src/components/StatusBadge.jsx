@@ -6,11 +6,23 @@ const StatusBadge = ({ status }) => {
     switch (s) {
       case 'Applied':
         return 'info';
+      case 'Under Review':
+        return 'info';
+      case 'Shortlisted':
+        return 'purple';
       case 'Interview':
+      case 'Interview Scheduled':
+      case 'Interview Completed':
         return 'warning';
       case 'Offer':
+      case 'Offer Extended':
+        return 'purple';
+      case 'Selected':
+      case 'Offer Accepted':
         return 'success';
       case 'Rejected':
+      case 'Offer Rejected':
+      case 'Withdrawn':
         return 'danger';
       default:
         return 'default';

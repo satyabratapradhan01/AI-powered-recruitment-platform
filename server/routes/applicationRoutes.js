@@ -8,6 +8,8 @@ import {
   withdrawApplication,
   deleteApplication,
   triggerATSAnalysis,
+  sendOfferLetter,
+  respondToOfferLetter,
 } from '../controllers/applicationController.js';
 import {
   validateApplicationCreate,
@@ -28,6 +30,16 @@ router
     createApplication
   )
   .get(authorize('job_seeker', 'seeker', 'hr', 'admin'), getApplications);
+
+// Send Offer Letter route (HR / Admin)
+router
+  .route('/:id/offer')
+  .post(authorize('hr', 'admin'), sendOfferLetter);
+
+// Respond to Offer Letter route (Candidate / Admin)
+router
+  .route('/:id/offer/respond')
+  .put(authorize('job_seeker', 'seeker', 'admin'), respondToOfferLetter);
 
 // Candidate withdraw application route
 router

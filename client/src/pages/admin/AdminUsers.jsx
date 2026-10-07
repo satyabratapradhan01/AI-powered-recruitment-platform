@@ -13,7 +13,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import ErrorState from '../../components/ui/ErrorState';
 import { SkeletonTable } from '../../components/ui/SkeletonLoader';
 import { useToast } from '../../context/ToastContext';
-import { Search, Eye, Lock, Unlock } from 'lucide-react';
+import { Search, Eye, Lock, Unlock, CheckCircle2, Clock } from 'lucide-react';
 
 const AdminUsers = () => {
   const toast = useToast();
@@ -75,12 +75,33 @@ const AdminUsers = () => {
     }
   };
 
+  const handleApproveHR = async (userToApprove) => {
+    try {
+      setUpdating(true);
+      await updateUserStatusApi(userToApprove._id, 'active');
+      setUsers((prev) =>
+        prev.map((u) => (u._id === userToApprove._id ? { ...u, accountStatus: 'active', status: 'active' } : u))
+      );
+      toast.success(`HR Recruiter "${userToApprove.name}" approved! They can now post job openings.`);
+      if (userModalOpen) setUserModalOpen(false);
+    } catch (err) {
+      console.error('Approve HR error:', err);
+      toast.error(err.response?.data?.message || 'Failed to approve HR account');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const pendingHRUsers = users.filter(
+    (u) => u.role === 'hr' && (u.accountStatus === 'pending' || u.status === 'pending')
+  );
+
   // Filtering
   const filteredUsers = users.filter((u) => {
     const userRole = u.role || 'seeker';
     const matchesRole = roleFilter === 'All' || userRole === roleFilter || (roleFilter === 'seeker' && userRole === 'job_seeker');
-    const userStatus = u.status || 'Active';
-    const matchesStatus = statusFilter === 'All' || userStatus === statusFilter;
+    const userStatus = u.accountStatus || u.status || 'active';
+    const matchesStatus = statusFilter === 'All' || userStatus.toLowerCase() === statusFilter.toLowerCase();
     const query = searchQuery.toLowerCase();
     const matchesQuery =
       (u.name && u.name.toLowerCase().includes(query)) ||
@@ -98,10 +119,40 @@ const AdminUsers = () => {
             User Management & Permissions
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            View registered Job Seekers, HR Recruiters, and Platform Admins. Activate or deactivate accounts.
+            View registered Job Seekers, HR Recruiters, and Platform Admins. Approve HR registration requests and manage permissions.
           </p>
         </div>
       </div>
+
+      {/* Pending HR Approvals Banner */}
+      {pendingHRUsers.length > 0 && (
+        <div className="p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-bounce-subtle">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-600 text-white rounded-xl">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="font-extrabold text-purple-950 text-sm">
+                {pendingHRUsers.length} HR Recruiter Registration{pendingHRUsers.length > 1 ? 's' : ''} Awaiting Approval
+              </p>
+              <p className="text-xs text-purple-800">
+                New HR recruiter accounts must be approved by an Admin before they can post job openings.
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="xs"
+            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md shrink-0"
+            onClick={() => {
+              setRoleFilter('hr');
+              setStatusFilter('pending');
+            }}
+          >
+            Review Pending HR Requests
+          </Button>
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -130,8 +181,9 @@ const AdminUsers = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
             options={[
               { value: 'All', label: 'All Statuses' },
-              { value: 'Active', label: 'Active' },
-              { value: 'Inactive', label: 'Inactive' },
+              { value: 'active', label: 'Active / Approved' },
+              { value: 'pending', label: 'Pending HR Approval' },
+              { value: 'deactivated', label: 'Deactivated' },
             ]}
           />
         </div>
@@ -161,7 +213,13 @@ const AdminUsers = () => {
               <TableBody>
                 {filteredUsers.map((u) => {
                   const roleName = u.role === 'job_seeker' ? 'seeker' : u.role || 'seeker';
-                  const userStatus = u.status || 'Active';
+                  const userStatus = u.accountStatus || u.status || 'active';
+                  const isPendingHR = roleName === 'hr' && userStatus === 'pending';
+
+                  let badgeVariant = 'neutral';
+                  if (userStatus === 'active') badgeVariant = 'success';
+                  if (userStatus === 'pending') badgeVariant = 'purple';
+                  if (userStatus === 'deactivated' || userStatus === 'suspended') badgeVariant = 'danger';
 
                   return (
                     <TableRow key={u._id}>
@@ -185,11 +243,22 @@ const AdminUsers = () => {
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={userStatus === 'Active' ? 'success' : 'neutral'} showDot size="xs">
-                          {userStatus}
+                        <Badge variant={badgeVariant} showDot size="xs">
+                          {userStatus === 'pending' ? 'Pending Approval' : userStatus}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right flex items-center justify-end gap-2">
+                        {isPendingHR && (
+                          <Button
+                            variant="success"
+                            size="xs"
+                            leftIcon={CheckCircle2}
+                            onClick={() => handleApproveHR(u)}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                          >
+                            Approve HR
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="xs"

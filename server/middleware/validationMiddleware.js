@@ -43,6 +43,9 @@ export const validateApplicationUpdate = (req, res, next) => {
     'Withdrawn',
     'Interview',
     'Offer',
+    'Offer Extended',
+    'Offer Accepted',
+    'Offer Rejected',
   ];
 
   if (status && !allowedStatuses.includes(status)) {

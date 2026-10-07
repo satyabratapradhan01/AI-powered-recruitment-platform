@@ -5,6 +5,8 @@ import AppError from '../utils/AppError.js';
 import {
   sendApplicationSubmittedEmail,
   sendApplicationStatusUpdateEmail,
+  sendOfferLetterEmail,
+  sendOfferResponseEmail,
 } from './emailService.js';
 import { createNotification } from './notificationService.js';
 import { analyzeResumeATS } from './aiService.js';
@@ -477,3 +479,151 @@ export const triggerATSAnalysis = async (id, userId, userRole) => {
 
   return application;
 };
+
+/**
+ * HR / Admin Issues and Sends Offer Letter to Candidate
+ */
+export const sendOfferLetter = async (id, userId, userRole, offerData) => {
+  const { salary, designation, joiningDate, expiryDate, location, additionalTerms } = offerData;
+
+  if (!salary) {
+    throw new AppError('Salary / CTC is required to send an offer letter', 400);
+  }
+
+  const application = await JobApplication.findById(id)
+    .populate('jobId')
+    .populate('candidateId', 'name email profile');
+
+  if (!application) {
+    throw new AppError('Job application not found', 404);
+  }
+
+  const isHROwner = application.jobId && application.jobId.postedBy && application.jobId.postedBy.toString() === userId.toString();
+  const isAdmin = userRole === 'admin';
+
+  if (!isHROwner && !isAdmin) {
+    throw new AppError('Forbidden: Only the HR recruiter who posted the job or an admin can send offer letters', 403);
+  }
+
+  const candidateUser = await User.findById(application.candidateId?._id || application.candidateId || application.userId);
+
+  if (!candidateUser) {
+    throw new AppError('Candidate details not found for this application', 404);
+  }
+
+  // Update offerDetails and application status
+  application.offerDetails = {
+    salary: salary || '',
+    designation: designation || application.jobTitle || application.jobId?.title || '',
+    joiningDate: joiningDate ? new Date(joiningDate) : null,
+    expiryDate: expiryDate ? new Date(expiryDate) : null,
+    location: location || application.location || application.jobId?.location || '',
+    additionalTerms: additionalTerms || '',
+    sentAt: new Date(),
+    offerStatus: 'Sent',
+    candidateResponseAt: null,
+    candidateComment: '',
+  };
+
+  application.status = 'Offer';
+  const updatedApplication = await application.save();
+
+  // Create real-time in-app notification for Candidate
+  await createNotification({
+    userId: candidateUser._id,
+    type: 'application_status',
+    title: '🎉 Job Offer Letter Received!',
+    message: `Congratulations! ${application.company || application.jobId?.company} has extended an official Offer Letter for the position of ${designation || application.jobTitle}.`,
+    relatedApplicationId: updatedApplication._id,
+  });
+
+  // Trigger real-time Email Notification to Candidate
+  if (candidateUser.email) {
+    sendOfferLetterEmail({
+      candidateEmail: candidateUser.email,
+      candidateName: candidateUser.name,
+      company: application.company || application.jobId?.company || 'Company',
+      jobTitle: application.jobTitle || application.jobId?.title || 'Position',
+      designation: designation || application.jobTitle || application.jobId?.title,
+      salary,
+      joiningDate,
+      expiryDate,
+      additionalTerms,
+    }).catch((err) => console.error('Offer Email Error:', err.message));
+  }
+
+  return updatedApplication;
+};
+
+/**
+ * Candidate Responds (Accept / Reject) to Offer Letter
+ */
+export const respondToOfferLetter = async (id, userId, userRole, responseData) => {
+  const { response, comment } = responseData;
+
+  if (!['Accepted', 'Rejected'].includes(response)) {
+    throw new AppError('Invalid response. Response must be either "Accepted" or "Rejected"', 400);
+  }
+
+  const application = await JobApplication.findById(id)
+    .populate('jobId')
+    .populate('candidateId', 'name email');
+
+  if (!application) {
+    throw new AppError('Job application not found', 404);
+  }
+
+  const isCandidateOwner =
+    (application.candidateId && application.candidateId._id.toString() === userId.toString()) ||
+    (application.userId && application.userId.toString() === userId.toString());
+
+  if (!isCandidateOwner && userRole !== 'admin') {
+    throw new AppError('Forbidden: Only the candidate who received this offer can respond', 403);
+  }
+
+  if (!application.offerDetails || application.offerDetails.offerStatus === 'None') {
+    throw new AppError('No offer letter has been issued for this application yet', 400);
+  }
+
+  // Update offerDetails & Application status
+  application.offerDetails.offerStatus = response;
+  application.offerDetails.candidateResponseAt = new Date();
+  application.offerDetails.candidateComment = comment || '';
+
+  const newStatus = response === 'Accepted' ? 'Offer Accepted' : 'Offer Rejected';
+  application.status = newStatus;
+
+  const updatedApplication = await application.save();
+
+  // Create real-time in-app notification for HR Recruiter
+  const hrUser = application.jobId && application.jobId.postedBy
+    ? await User.findById(application.jobId.postedBy)
+    : null;
+
+  const candidateName = application.candidateId?.name || 'The candidate';
+
+  if (hrUser) {
+    await createNotification({
+      userId: hrUser._id,
+      type: 'application_status',
+      title: `Offer Letter ${response}: ${candidateName}`,
+      message: `${candidateName} has ${response.toLowerCase()} the offer letter for ${application.jobTitle}.`,
+      relatedApplicationId: updatedApplication._id,
+    });
+
+    if (hrUser.email) {
+      sendOfferResponseEmail({
+        hrEmail: hrUser.email,
+        hrName: hrUser.name,
+        candidateName,
+        company: application.company || application.jobId?.company || 'Company',
+        jobTitle: application.jobTitle || application.jobId?.title || 'Position',
+        response,
+        candidateComment: comment || '',
+      }).catch((err) => console.error('Offer Response Email Error:', err.message));
+    }
+  }
+
+  return updatedApplication;
+};
+

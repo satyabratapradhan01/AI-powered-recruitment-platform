@@ -336,3 +336,144 @@ export const sendInterviewCancelledEmail = async ({
 
   return await sendEmail({ to: candidateEmail, subject, html });
 };
+
+/**
+ * Event Trigger 6: Offer Letter Issued
+ */
+export const sendOfferLetterEmail = async ({
+  candidateEmail,
+  candidateName,
+  company,
+  jobTitle,
+  designation,
+  salary,
+  joiningDate,
+  expiryDate,
+  additionalTerms,
+}) => {
+  const subject = `🎉 Official Job Offer Letter: ${jobTitle} at ${company}`;
+  const headline = 'Congratulations! You Have Received a Job Offer';
+
+  const formattedJoiningDate = joiningDate
+    ? new Date(joiningDate).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'To be agreed';
+
+  const formattedExpiryDate = expiryDate
+    ? new Date(expiryDate).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'N/A';
+
+  const bodyHtml = `
+    <p>Dear <strong>${candidateName}</strong>,</p>
+    <p>We are delighted to extend an official offer of employment for the position of <strong>${designation || jobTitle}</strong> at <strong>${company}</strong>!</p>
+    <div style="text-align: center; margin: 16px 0;">
+      <span class="badge badge-purple" style="font-size: 14px; padding: 8px 18px;">Official Offer Letter</span>
+    </div>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Designation:</span> <span class="info-value">${designation || jobTitle}</span></div>
+      <div class="info-row"><span class="info-label">Company:</span> <span class="info-value">${company}</span></div>
+      <div class="info-row"><span class="info-label">Offered CTC / Salary:</span> <span class="info-value" style="color: #16a34a; font-size: 16px;">${salary || 'As per Discussion'}</span></div>
+      <div class="info-row"><span class="info-label">Expected Joining Date:</span> <span class="info-value">${formattedJoiningDate}</span></div>
+      ${expiryDate ? `<div class="info-row"><span class="info-label">Offer Valid Until:</span> <span class="info-value">${formattedExpiryDate}</span></div>` : ''}
+    </div>
+    ${additionalTerms ? `<p><strong>Offer Terms & Notes:</strong><br><em>${additionalTerms}</em></p>` : ''}
+    <p>Please log in to your account dashboard to review the complete offer letter and respond (Accept or Decline) by the deadline.</p>
+  `;
+
+  const html = renderEmailLayout({
+    title: subject,
+    headline,
+    bodyHtml,
+    ctaText: 'Review & Respond to Offer',
+    ctaUrl: `${platformUrl}/offers`,
+  });
+
+  return await sendEmail({ to: candidateEmail, subject, html });
+};
+
+/**
+ * Event Trigger 7: Offer Letter Responded by Candidate
+ */
+export const sendOfferResponseEmail = async ({
+  hrEmail,
+  hrName,
+  candidateName,
+  company,
+  jobTitle,
+  response,
+  candidateComment,
+}) => {
+  const isAccepted = response === 'Accepted';
+  const subject = `Offer Letter ${response}: ${candidateName} for ${jobTitle}`;
+  const headline = `Candidate ${response} Offer Letter`;
+
+  const badgeClass = isAccepted ? 'badge-green' : 'badge-red';
+
+  const bodyHtml = `
+    <p>Dear <strong>${hrName || 'Hiring Manager'}</strong>,</p>
+    <p>Candidate <strong>${candidateName}</strong> has officialy <strong>${response.toLowerCase()}</strong> the offer letter extended for <strong>${jobTitle}</strong> at <strong>${company}</strong>.</p>
+    <div style="text-align: center;">
+      <span class="badge ${badgeClass}">${response}</span>
+    </div>
+    ${
+      candidateComment
+        ? `<p><strong>Candidate Note:</strong><br><em>"${candidateComment}"</em></p>`
+        : ''
+    }
+    <p>You can check full offer history and applicant status on your HR Recruiter Workspace.</p>
+  `;
+
+  const html = renderEmailLayout({
+    title: subject,
+    headline,
+    bodyHtml,
+    ctaText: 'View HR Dashboard',
+    ctaUrl: `${platformUrl}/hr/offers`,
+  });
+
+  return await sendEmail({ to: hrEmail, subject, html });
+};
+
+/**
+ * Event Trigger 8: HR Account Approved by Admin
+ */
+export const sendHRApprovedEmail = async ({ hrEmail, hrName }) => {
+  const subject = `🎉 Your HR Recruiter Account Has Been Approved!`;
+  const headline = 'HR Account Approved — You Can Now Post Jobs';
+
+  const bodyHtml = `
+    <p>Dear <strong>${hrName || 'Recruiter'}</strong>,</p>
+    <p>Great news! Your HR Recruiter account registration has been reviewed and officialy <strong>APPROVED</strong> by the Platform Administrator.</p>
+    <div style="text-align: center; margin: 16px 0;">
+      <span class="badge badge-green" style="font-size: 14px; padding: 8px 18px;">Account Active & Approved</span>
+    </div>
+    <p>You now have full recruiter privileges on TalentAI Platform, including:</p>
+    <ul>
+      <li>Posting new job openings</li>
+      <li>Managing candidate application pipelines</li>
+      <li>Running AI ATS candidate matching</li>
+      <li>Issuing official offer letters</li>
+    </ul>
+    <p>Log in to your HR Recruiter Workspace to post your first job opening.</p>
+  `;
+
+  const html = renderEmailLayout({
+    title: subject,
+    headline,
+    bodyHtml,
+    ctaText: 'Post a Job Now',
+    ctaUrl: `${platformUrl}/hr/jobs/new`,
+  });
+
+  return await sendEmail({ to: hrEmail, subject, html });
+};
+
+

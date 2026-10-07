@@ -16,6 +16,8 @@ import {
   Sparkles,
   Building2,
   FileCheck2,
+  FileText,
+  Award,
   HelpCircle,
   X,
 } from 'lucide-react';
@@ -44,6 +46,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
     { label: 'Find Jobs', path: '/jobs', icon: Search, end: true },
     { label: 'My Applications', path: '/applications', icon: Briefcase },
+    { label: 'Offer Letters', path: '/offers', icon: Award },
     { label: 'Resume / ATS', path: '/ats-score', icon: FileCheck2 },
     { label: 'Interviews', path: '/interviews', icon: Calendar },
     { label: 'Interview Prep', path: '/interview-preparation', icon: HelpCircle },
@@ -57,6 +60,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'My Jobs', path: '/hr/jobs', icon: Briefcase, end: true },
     { label: 'Post Job', path: '/hr/jobs/new', icon: PlusCircle, end: true },
     { label: 'Applicants', path: '/hr/applicants', icon: Users },
+    { label: 'Offer Letters', path: '/hr/offers', icon: Award },
     { label: 'Interviews', path: '/hr/interviews', icon: Calendar },
     { label: 'Notifications', path: '/hr/notifications', icon: Bell },
     { label: 'Company Profile', path: '/hr/company-profile', icon: Building2 },
@@ -121,8 +125,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           {/* Role Switcher Bar */}
           <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
-            {/* Candidate Tab (Visible to Candidate or Admin) */}
-            {(isCandidateUser || isAdminUser) && (
+            {/* Candidate Tab (Visible to Candidate or Admin outside admin panel) */}
+            {(isCandidateUser || (isAdminUser && !isAdminRoute)) && (
               <NavLink
                 to="/dashboard"
                 className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
@@ -135,8 +139,8 @@ const Sidebar = ({ isOpen, onClose }) => {
               </NavLink>
             )}
 
-            {/* HR Tab (Visible to HR or Admin) */}
-            {(isHRUser || isAdminUser) && (
+            {/* HR Tab (Visible to HR or Admin outside admin panel) */}
+            {(isHRUser || (isAdminUser && !isAdminRoute)) && (
               <NavLink
                 to="/hr/dashboard"
                 className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
