@@ -76,12 +76,27 @@ const Login = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-6 relative z-10 animate-fade-in-up">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Talent<span className="text-indigo-600">AI</span>
-          </h1>
+          <Link to="/" className="inline-flex items-center justify-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </div>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              HireFlow <span className="font-bold text-slate-900">AI</span>
+            </span>
+          </Link>
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
             AI-Powered Recruitment Portal
           </p>

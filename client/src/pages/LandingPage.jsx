@@ -1,7 +1,7 @@
 import React from 'react';
 import LandingNavbar from '../components/landing/LandingNavbar';
 import HeroSection from '../components/landing/HeroSection';
-import TrustSection from '../components/landing/TrustSection';
+import CompanyLogosSection from '../components/landing/CompanyLogosSection';
 import FeaturesSection from '../components/landing/FeaturesSection';
 import HowItWorks from '../components/landing/HowItWorks';
 import RoleBasedSection from '../components/landing/RoleBasedSection';
@@ -12,7 +12,7 @@ import LandingFooter from '../components/landing/LandingFooter';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-between overflow-x-hidden w-full font-sans">
+    <div className="min-h-screen bg-white flex flex-col justify-between w-full font-sans">
       {/* 1. Navbar */}
       <LandingNavbar />
 
@@ -20,10 +20,10 @@ const LandingPage = () => {
         {/* 2. Hero Section */}
         <HeroSection />
 
-        {/* 3. Trusted Platform Metrics */}
-        <TrustSection />
+        {/* 3. Trusted By Best Companies Logos */}
+        <CompanyLogosSection />
 
-        {/* 4-11. Core Features Grid: AI Job Matching, ATS Score, Job Search, Application Tracking, Interview Scheduling, HR Management, AI Candidate Matching, Notifications */}
+        {/* 4. Core Features Grid */}
         <FeaturesSection />
 
         {/* 12. How It Works */}

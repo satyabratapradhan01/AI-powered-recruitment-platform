@@ -74,7 +74,7 @@ const RoleBasedSection = () => {
             Tailored Experiences for Every Role
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            Whether you are landing your next role, sourcing top talent, or administering the platform, TalentAI delivers dedicated workflows.
+            Whether you are landing your next role, sourcing top talent, or administering the platform, HireFlow AI delivers dedicated workflows.
           </p>
         </div>
 

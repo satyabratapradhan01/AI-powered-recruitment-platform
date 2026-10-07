@@ -455,7 +455,7 @@ export const sendHRApprovedEmail = async ({ hrEmail, hrName }) => {
     <div style="text-align: center; margin: 16px 0;">
       <span class="badge badge-green" style="font-size: 14px; padding: 8px 18px;">Account Active & Approved</span>
     </div>
-    <p>You now have full recruiter privileges on TalentAI Platform, including:</p>
+    <p>You now have full recruiter privileges on HireFlow AI Platform, including:</p>
     <ul>
       <li>Posting new job openings</li>
       <li>Managing candidate application pipelines</li>

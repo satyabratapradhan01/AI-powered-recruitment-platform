@@ -132,7 +132,7 @@ const HRDashboard = () => {
           <div>
             <p className="font-extrabold text-sm text-amber-950">Registration Pending Administrator Approval</p>
             <p className="text-amber-800">
-              Welcome to TalentAI! Your HR Recruiter account registration is currently undergoing Admin review. Once an Administrator approves your account, you will be able to post job openings.
+              Welcome to HireFlow AI! Your HR Recruiter account registration is currently undergoing Admin review. Once an Administrator approves your account, you will be able to post job openings.
             </p>
           </div>
         </div>

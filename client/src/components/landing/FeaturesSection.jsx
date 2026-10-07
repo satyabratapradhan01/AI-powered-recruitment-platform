@@ -101,10 +101,10 @@ const FeaturesSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3 animate-fade-in-up">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wide">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wide">
             <span>Platform Capabilities</span>
           </div>
+
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             End-to-End AI Recruitment Suite
           </h2>
@@ -113,33 +113,41 @@ const FeaturesSection = () => {
           </p>
         </div>
 
-        {/* 8 Feature Cards Grid */}
+        {/* 8 Feature Cards Grid with Staggered Entrance & Interactive Hover Effects */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featureList.map((f) => {
+          {featureList.map((f, index) => {
             const Icon = f.icon;
             return (
-              <Card
+              <div
                 key={f.id}
-                variant="interactive"
-                className="p-6 flex flex-col justify-between group hover:border-indigo-300"
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${(index % 4) * 100 + 100}ms` }}
               >
-                <CardContent className="p-0 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className={`p-3 rounded-2xl border ${f.color}`}>
-                      <Icon className="w-6 h-6" />
+                <Card
+                  variant="interactive"
+                  className="p-6 h-full flex flex-col justify-between group rounded-3xl border border-slate-200/80 hover:border-indigo-400/80 hover:shadow-[0_20px_45px_-12px_rgba(99,102,241,0.2)] hover:-translate-y-2 transition-all duration-300 ease-out relative overflow-hidden"
+                >
+                  {/* Hover Light Gradient Accent */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                  <CardContent className="p-0 space-y-4 relative z-10">
+                    <div className="flex items-center justify-between">
+                      <div className={`p-3.5 rounded-2xl border ${f.color} group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 shadow-2xs`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <Badge variant={f.badgeVariant} size="xs" className="group-hover:scale-105 transition-transform">
+                        {f.badge}
+                      </Badge>
                     </div>
-                    <Badge variant={f.badgeVariant} size="xs">
-                      {f.badge}
-                    </Badge>
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition leading-snug">
-                    {f.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {f.description}
-                  </p>
-                </CardContent>
-              </Card>
+                    <h3 className="text-base font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                      {f.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      {f.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             );
           })}
         </div>

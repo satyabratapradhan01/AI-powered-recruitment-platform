@@ -55,7 +55,7 @@ const DashboardShowcase = () => {
 
             <div className="pt-4">
               <Link to="/register" className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
-                Try JobTrack Free →
+                Try HireFlow Free →
               </Link>
             </div>
           </div>
@@ -70,7 +70,7 @@ const DashboardShowcase = () => {
                   <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block" />
                 </div>
                 <div className="bg-white border rounded-md px-4 py-1 text-xs text-gray-500 font-mono">
-                  🔒 jobtrack.app/dashboard
+                  🔒 app.hireflow.ai/dashboard
                 </div>
                 <div className="w-12" />
               </div>
@@ -79,8 +79,23 @@ const DashboardShowcase = () => {
                 {/* Mock Sidebar */}
                 <div className="hidden sm:flex flex-col w-48 bg-white border-r border-gray-100 p-4 space-y-4">
                   <div className="flex items-center space-x-2 pb-3 border-b">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">JT</div>
-                    <span className="font-bold text-sm text-gray-900">JobTrack</span>
+                    <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center shadow-xs">
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                      </svg>
+                    </div>
+                    <span className="font-bold text-sm text-gray-900">HireFlow AI</span>
                   </div>
                   <div className="space-y-1 text-xs font-semibold">
                     <div className="px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 flex items-center space-x-2"><span>📊</span><span>Dashboard</span></div>

@@ -21,9 +21,15 @@
 
 /* Design Tokens & Utility Classes */
 .bg-grid-pattern {
-  background-image: radial-gradient(rgba(99, 102, 241, 0.12) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(99, 102, 241, 0.22) 1.25px, transparent 1.25px);
+  background-size: 20px 20px;
 }
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(120, 110, 220, 0.3) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
 
 .glass-panel {
   @apply bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-sm;
@@ -39,6 +45,7 @@
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -49,27 +56,70 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 @keyframes floatSlow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-6px);
   }
 }
 
 @keyframes pulseSubtle {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.45;
   }
+}
+
+@keyframes textGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-text-gradient {
+  background-size: 200% auto;
+  animation: textGradient 4s ease infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
 }
 
 .animate-fade-in-up {
@@ -88,27 +138,122 @@
   animation: pulseSubtle 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@keyframes floatOrb1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(25px, -15px) scale(1.1);
+  }
+}
+
+@keyframes floatOrb2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(-25px, 20px) scale(1.15);
+  }
+}
+
+.animate-orb-1 {
+  animation: floatOrb1 8s ease-in-out infinite;
+}
+
+.animate-orb-2 {
+  animation: floatOrb2 10s ease-in-out infinite;
+}
+
+@keyframes pulseGrid {
+  0%, 100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes floatBeam {
+  0%, 100% {
+    transform: translate(-50%, 0px) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate(-50%, -15px) scale(1.08);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-grid {
+  animation: pulseGrid 6s ease-in-out infinite;
+}
+
+.animate-float-beam {
+  animation: floatBeam 8s ease-in-out infinite;
+}
+
+
+@keyframes meteorRain {
+  0% {
+    transform: translateY(-100px) rotate(15deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(500px) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+.animate-meteor-rain {
+  animation: meteorRain 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+
+
 /* Staggered Delay Helpers */
-.delay-100 { animation-delay: 100ms; }
-.delay-200 { animation-delay: 200ms; }
-.delay-300 { animation-delay: 300ms; }
-.delay-400 { animation-delay: 400ms; }
-.delay-500 { animation-delay: 500ms; }
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-300 rounded-full hover:bg-slate-400 transition;
 }
 
 /* Accessibility: Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+
   .animate-fade-in-up,
   .animate-fade-in,
   .animate-float-slow,
@@ -123,8 +268,10 @@
    OFFICIAL OFFER LETTER PRINT & PDF STYLES
    ========================================================================== */
 @media print {
+
   /* Hide all website chrome, navigation, headers, sidebars, buttons, modals backdrop */
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -168,4 +315,3 @@
     margin: 10mm;
   }
 }
-

@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Card, { CardContent } from '../components/ui/Card';
 import ErrorState from '../components/ui/ErrorState';
-import { Mail, Lock, User, Eye, EyeOff, Briefcase, UserPlus, UserCheck, Building2 } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, UserPlus, Building2, UserCheck } from 'lucide-react';
 
 const Register = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const roleParam = searchParams.get('role');
+  const isHRMode = roleParam === 'hr' || roleParam === 'recruiter' || roleParam === 'employer';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'seeker', // Default role: Job Seeker
+    role: isHRMode ? 'hr' : 'seeker',
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -24,6 +30,13 @@ const Register = () => {
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      role: isHRMode ? 'hr' : 'seeker',
+    }));
+  }, [isHRMode]);
 
   const validate = () => {
     const newErrors = {};
@@ -66,7 +79,7 @@ const Register = () => {
     try {
       setIsSubmitting(true);
 
-      // Register user with specified role ('seeker' or 'hr')
+      // Register user with current role ('seeker' or 'hr')
       await register(
         formData.name.trim(),
         formData.email.trim(),
@@ -76,12 +89,12 @@ const Register = () => {
 
       // Automatically log in after successful registration
       const userObj = await login(formData.email.trim(), formData.password);
-      toast.success('Account created successfully! Welcome to TalentAI.');
-
-      // Role-based redirect
+      
       if (userObj?.role === 'hr') {
-        navigate('/dashboard');
+        toast.success('HR account registered! Account is pending Admin approval.');
+        navigate('/hr/dashboard');
       } else {
+        toast.success('Candidate account created successfully! Welcome to HireFlow AI.');
         navigate('/dashboard');
       }
     } catch (err) {
@@ -94,27 +107,65 @@ const Register = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-grid-pattern">
       <div className="sm:mx-auto sm:w-full sm:max-w-md space-y-6 relative z-10 animate-fade-in-up">
-        {/* Brand Header */}
+        {/* Official HireFlow AI Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Talent<span className="text-indigo-600">AI</span>
-          </h1>
+          <Link to="/" className="inline-flex items-center justify-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </div>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              HireFlow <span className="font-bold text-slate-900">AI</span>
+            </span>
+          </Link>
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-            Create Your Account
+            {isHRMode ? 'Employer & Recruiter Portal' : 'Candidate Registration'}
           </p>
         </div>
 
         <Card variant="default" className="shadow-xl border-slate-200/80">
           <CardContent className="space-y-6 p-6 sm:p-8">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                Join the platform
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                  {isHRMode ? 'Register HR Recruiter' : 'Create Candidate Account'}
+                </h2>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                    isHRMode
+                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                      : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                  }`}
+                >
+                  {isHRMode ? (
+                    <>
+                      <Building2 className="w-3 h-3 text-purple-600" />
+                      <span>HR Recruiter</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-3 h-3 text-indigo-600" />
+                      <span>Job Candidate</span>
+                    </>
+                  )}
+                </span>
+              </div>
               <p className="text-xs text-slate-500 mt-1">
-                Select your primary account type to get started.
+                {isHRMode
+                  ? 'Sign up to post jobs and manage candidate hiring pipelines (Requires Admin Review).'
+                  : 'Create your account to apply for jobs and track applications in real-time.'}
               </p>
             </div>
 
@@ -123,45 +174,11 @@ const Register = () => {
             )}
 
             <form className="space-y-4" onSubmit={handleSubmit}>
-              {/* Account Role Selector Cards */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-700 tracking-wide">
-                  I am registering as:
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    onClick={() => setFormData((prev) => ({ ...prev, role: 'seeker' }))}
-                    className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                      formData.role === 'seeker'
-                        ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-xs'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <UserCheck className={`w-5 h-5 mb-1 ${formData.role === 'seeker' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    <span className="text-xs font-bold">Job Seeker</span>
-                    <span className="text-[10px] text-slate-500 font-medium">Default Role</span>
-                  </div>
-
-                  <div
-                    onClick={() => setFormData((prev) => ({ ...prev, role: 'hr' }))}
-                    className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
-                      formData.role === 'hr'
-                        ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900 shadow-xs'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    <Building2 className={`w-5 h-5 mb-1 ${formData.role === 'hr' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    <span className="text-xs font-bold">HR / Recruiter</span>
-                    <span className="text-[10px] text-slate-500 font-medium">Employer Portal</span>
-                  </div>
-                </div>
-              </div>
-
               <Input
                 label="Full Name *"
                 type="text"
                 name="name"
-                placeholder="Alex Morgan"
+                placeholder={isHRMode ? 'Sarah Chen (HR Manager)' : 'Alex Morgan'}
                 value={formData.name}
                 onChange={handleChange}
                 error={errors.name}
@@ -170,10 +187,10 @@ const Register = () => {
               />
 
               <Input
-                label="Email Address *"
+                label="Work Email Address *"
                 type="email"
                 name="email"
-                placeholder="alex@company.com"
+                placeholder={isHRMode ? 'sarah@company.com' : 'alex@email.com'}
                 value={formData.email}
                 onChange={handleChange}
                 error={errors.email}
@@ -236,12 +253,12 @@ const Register = () => {
                 leftIcon={UserPlus}
                 className="mt-2"
               >
-                Register Account
+                {isHRMode ? 'Register HR Account' : 'Register Candidate Account'}
               </Button>
             </form>
 
-            <div className="pt-4 border-t border-slate-100 text-center">
-              <p className="text-xs text-slate-500">
+            <div className="pt-4 border-t border-slate-100 space-y-2 text-center text-xs text-slate-500">
+              <p>
                 Already have an account?{' '}
                 <Link
                   to="/login"
@@ -250,6 +267,28 @@ const Register = () => {
                   Sign in here
                 </Link>
               </p>
+
+              {isHRMode ? (
+                <p>
+                  Looking for job opportunities?{' '}
+                  <Link
+                    to="/register"
+                    className="font-bold text-slate-700 hover:text-slate-900 hover:underline"
+                  >
+                    Candidate Sign up
+                  </Link>
+                </p>
+              ) : (
+                <p>
+                  Are you an Employer or HR Manager?{' '}
+                  <Link
+                    to="/register?role=hr"
+                    className="font-bold text-slate-700 hover:text-slate-900 hover:underline"
+                  >
+                    Register HR Account here
+                  </Link>
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

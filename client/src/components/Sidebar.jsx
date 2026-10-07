@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -25,6 +25,7 @@ import {
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const [isHovered, setIsHovered] = useState(false);
 
   const userRole = user?.role || 'seeker';
   const isCandidateUser = userRole === 'job_seeker' || userRole === 'seeker';
@@ -89,13 +90,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     portalTitle = 'HR Recruiter Workspace';
   }
 
-  const linkClasses = ({ isActive }) =>
-    `flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold rounded-xl transition-all duration-150 ${
-      isActive
-        ? `${activeRoleColor} text-white shadow-sm font-bold`
-        : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
-    }`;
-
   return (
     <>
       {/* Mobile Drawer Backdrop */}
@@ -107,9 +101,11 @@ const Sidebar = ({ isOpen, onClose }) => {
       )}
 
       <aside
-        className={`fixed md:sticky top-0 md:top-[57px] z-40 w-64 bg-white border-r border-slate-200/80 p-4 h-screen md:h-[calc(100vh-57px)] flex flex-col justify-between transition-transform duration-300 md:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`fixed md:sticky top-0 md:top-[57px] z-40 bg-white border-r border-slate-200/80 p-3.5 h-screen md:h-[calc(100vh-57px)] flex flex-col justify-between transition-all duration-500 ease-in-out ${
+          isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
+        } ${isHovered ? 'md:w-64 md:shadow-2xl' : 'md:w-20'}`}
       >
         <div className="space-y-5">
           {/* Mobile Sidebar Close Header */}
@@ -124,53 +120,58 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
 
           {/* Role Switcher Bar */}
-          <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80">
-            {/* Candidate Tab (Visible to Candidate or Admin outside admin panel) */}
-            {(isCandidateUser || (isAdminUser && !isAdminRoute)) && (
-              <NavLink
-                to="/dashboard"
-                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                  activeRole === 'seeker'
-                    ? 'bg-white text-indigo-600 shadow-xs font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Candidate
-              </NavLink>
-            )}
+          <div className="flex items-center justify-between p-1 bg-slate-100 rounded-xl border border-slate-200/80 min-h-[36px] transition-all duration-500">
+            {isHovered ? (
+              <div className="flex items-center justify-between w-full animate-fade-in">
+                {(isCandidateUser || (isAdminUser && !isAdminRoute)) && (
+                  <NavLink
+                    to="/dashboard"
+                    className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition-all duration-300 ${
+                      activeRole === 'seeker'
+                        ? 'bg-white text-indigo-600 shadow-xs font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Candidate
+                  </NavLink>
+                )}
 
-            {/* HR Tab (Visible to HR or Admin outside admin panel) */}
-            {(isHRUser || (isAdminUser && !isAdminRoute)) && (
-              <NavLink
-                to="/hr/dashboard"
-                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                  activeRole === 'hr'
-                    ? 'bg-purple-600 text-white shadow-xs font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                HR
-              </NavLink>
-            )}
+                {(isHRUser || (isAdminUser && !isAdminRoute)) && (
+                  <NavLink
+                    to="/hr/dashboard"
+                    className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition-all duration-300 ${
+                      activeRole === 'hr'
+                        ? 'bg-purple-600 text-white shadow-xs font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    HR
+                  </NavLink>
+                )}
 
-            {/* Admin Tab (Visible to Admin only) */}
-            {isAdminUser && (
-              <NavLink
-                to="/admin/dashboard"
-                className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition ${
-                  activeRole === 'admin'
-                    ? 'bg-slate-900 text-white shadow-xs font-black'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Admin
-              </NavLink>
+                {isAdminUser && (
+                  <NavLink
+                    to="/admin/dashboard"
+                    className={`flex-1 text-center py-1 text-[10px] font-bold rounded-lg transition-all duration-300 ${
+                      activeRole === 'admin'
+                        ? 'bg-slate-900 text-white shadow-xs font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Admin
+                  </NavLink>
+                )}
+              </div>
+            ) : (
+              <div className="w-full flex items-center justify-center text-[11px] font-black uppercase text-indigo-700 tracking-wider animate-fade-in">
+                {activeRole === 'admin' ? 'ADM' : activeRole === 'hr' ? 'HR' : 'CAND'}
+              </div>
             )}
           </div>
 
           <div className="space-y-1">
-            <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              {portalTitle}
+            <p className={`px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 transition-all duration-500 ${!isHovered ? 'md:text-center md:px-0' : ''}`}>
+              {isHovered ? portalTitle : '•••'}
             </p>
             {currentNavItems.map((item) => {
               const Icon = item.icon;
@@ -180,36 +181,27 @@ const Sidebar = ({ isOpen, onClose }) => {
                   to={item.path}
                   end={item.end}
                   onClick={onClose}
-                  className={linkClasses}
+                  title={item.label}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 py-2.5 text-xs font-semibold rounded-xl transition-all duration-300 ${
+                      isHovered ? 'px-3.5 justify-start' : 'px-3.5 md:px-0 md:justify-center'
+                    } ${
+                      isActive
+                        ? `${activeRoleColor} text-white shadow-sm font-bold`
+                        : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'
+                    }`
+                  }
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <Icon className="w-4 h-4 shrink-0 transition-transform duration-300" />
+                  <span className={`whitespace-nowrap transition-all duration-500 ${!isHovered ? 'md:hidden md:opacity-0' : 'inline opacity-100'}`}>
+                    {item.label}
+                  </span>
                 </NavLink>
               );
             })}
           </div>
         </div>
 
-        {/* Sidebar Footer Info Card */}
-        <div
-          className={`p-3.5 border rounded-xl space-y-1.5 ${
-            activeRole === 'admin'
-              ? 'bg-slate-900 text-white border-slate-800'
-              : activeRole === 'hr'
-              ? 'bg-purple-50/60 border-purple-100'
-              : 'bg-indigo-50/60 border-indigo-100'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <p className={`text-xs font-bold ${activeRole === 'admin' ? 'text-slate-100' : activeRole === 'hr' ? 'text-purple-950' : 'text-indigo-950'}`}>
-              {activeRole === 'admin' ? 'Admin Security' : activeRole === 'hr' ? 'Recruiter Hub' : 'AI ATS Engine'}
-            </p>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          </div>
-          <p className={`text-[11px] leading-snug ${activeRole === 'admin' ? 'text-slate-400' : activeRole === 'hr' ? 'text-purple-700/80' : 'text-indigo-700/80'}`}>
-            Role Guard active.
-          </p>
-        </div>
       </aside>
     </>
   );

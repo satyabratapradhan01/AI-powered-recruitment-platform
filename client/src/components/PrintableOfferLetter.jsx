@@ -185,7 +185,7 @@ const PrintableOfferLetter = ({ application, candidateUser }) => {
 
       {/* 9. Footer Footer Watermark */}
       <div className="text-center border-t border-slate-100 pt-4 text-[10px] text-slate-400">
-        <p>This is an official document generated via TalentAI Recruitment Platform. Valid without physical stamp when digitally accepted.</p>
+        <p>This is an official document generated via HireFlow AI Recruitment Platform. Valid without physical stamp when digitally accepted.</p>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ const SecuritySection = () => {
             Enterprise-Grade Platform Security
           </h2>
           <p className="text-sm sm:text-base text-slate-600">
-            TalentAI protects sensitive resume documents, application histories, and credentials with multi-layer security.
+            HireFlow AI protects sensitive resume documents, application histories, and credentials with multi-layer security.
           </p>
         </div>
 
