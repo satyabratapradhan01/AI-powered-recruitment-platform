@@ -165,7 +165,7 @@ const HeroSection = () => {
           {/* Top Pill Badge */}
           <div className="animate-fade-in-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100/90 border border-indigo-200/80 text-indigo-700 text-xs sm:text-sm font-semibold shadow-xs mb-5 hover:bg-indigo-100 transition-colors">
             <Zap className="w-4 h-4 text-indigo-600 fill-indigo-600 animate-pulse" />
-            <span>AI Job Application Tracker</span>
+            <span> AI ATS Resume Screening & Recruitment Platform</span>
           </div>
 
           {/* Serif Highlighted Main Headline */}
