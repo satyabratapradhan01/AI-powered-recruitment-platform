@@ -44,26 +44,26 @@ const HeroSection = () => {
           {/* Top Pill Badge */}
           <div className="animate-fade-in-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100/90 border border-indigo-200/80 text-indigo-700 text-xs sm:text-sm font-semibold shadow-xs mb-5 hover:bg-indigo-100 transition-colors">
             <Zap className="w-4 h-4 text-indigo-600 fill-indigo-600 animate-pulse" />
-            <span>AI ATS Resume Screening & Job Tracker</span>
+            <span>Full-Stack Portfolio • AI ATS Resume Screening & Recruitment Platform</span>
           </div>
 
-          {/* Serif Highlighted Main Headline - Exact matching 2nd image with slightly reduced size */}
+          {/* Serif Highlighted Main Headline */}
           <h1 className="animate-fade-in-up delay-100 text-3xl sm:text-5xl lg:text-6xl font-serif font-normal text-slate-800 tracking-tight leading-[1.2] max-w-3xl mx-auto">
             AI-powered hiring on{' '}
             <span className="bg-[#E5DCFF] text-[#1A1448] font-serif italic px-3 sm:px-4 py-0.5 rounded-2xl border border-indigo-200/90 shadow-xs inline-block my-1 sm:my-0 hover:scale-105 transition-transform duration-300 cursor-default">
-              your brand.
+              autopilot.
             </span>{' '}
             At any scale.
           </h1>
 
           {/* Subtitle */}
           <p className="animate-fade-in-up delay-200 mt-5 text-sm sm:text-base text-slate-600 max-w-xl mx-auto font-normal leading-relaxed">
-            Post jobs, screen resumes with Gemini AI, run candidate online assessments, and track every application in real-time.
+            Automate resume ATS scoring with Gemini AI, streamline recruiter pipelines, issue official offer letters, and evaluate top candidates in real-time.
           </p>
 
           {/* Built For Tagline */}
           <p className="animate-fade-in-up delay-200 mt-2.5 text-xs sm:text-sm font-semibold text-slate-500">
-            Built for <span className="text-indigo-600 font-bold">HR recruiters</span>, <span className="text-indigo-600 font-bold">employers</span> & <span className="text-indigo-600 font-bold">job seekers</span>
+            Engineered for <span className="text-indigo-600 font-bold">HR recruiters</span>, <span className="text-indigo-600 font-bold">employers</span> & <span className="text-indigo-600 font-bold">job seekers</span>
           </p>
 
           {/* Action Buttons */}
@@ -73,7 +73,7 @@ const HeroSection = () => {
                 type="button"
                 className="px-7 py-3 rounded-full bg-[#1A1830] hover:bg-[#2A2748] text-white font-bold text-sm sm:text-base shadow-lg shadow-indigo-950/20 hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 cursor-pointer flex items-center gap-2 group"
               >
-                <span>Start free</span>
+                <span>Try Live Platform</span>
                 <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
               </button>
             </Link>
@@ -82,7 +82,7 @@ const HeroSection = () => {
                 type="button"
                 className="px-7 py-3 rounded-full bg-white/90 hover:bg-white border border-slate-200/90 text-slate-800 font-bold text-sm sm:text-base shadow-xs hover:shadow-md hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 cursor-pointer flex items-center gap-2"
               >
-                <span>See the product</span>
+                <span>Explore Features</span>
               </button>
             </a>
           </div>
