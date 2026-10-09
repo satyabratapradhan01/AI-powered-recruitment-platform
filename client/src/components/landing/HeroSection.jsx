@@ -223,14 +223,13 @@ const HeroSection = () => {
             style={{ opacity: 'calc(0.15 + var(--p) * 0.65)' }}
           />
 
-        {/* 3D layer: tilts, swings and grows as the page scrolls */}
+        {/* Flat Main App Mockup Window Layer */}
         <div
           className="group relative z-10"
           style={{
             transform:
-              'perspective(1400px) rotateX(calc((1 - var(--p)) * 20deg)) rotateY(calc((1 - var(--p)) * -12deg)) rotateZ(calc((1 - var(--p)) * 1.5deg)) scale(calc(0.74 + var(--p) * 0.44)) translateY(calc(var(--p) * -25px))',
+              'scale(calc(0.94 + var(--p) * 0.06)) translateY(calc(var(--p) * -10px))',
             transformOrigin: 'top center',
-            transformStyle: 'preserve-3d',
             transition: 'transform 0.12s ease-out, box-shadow 0.3s ease-out',
             willChange: 'transform',
           }}
@@ -241,7 +240,7 @@ const HeroSection = () => {
             {/* Light sweep that glides across the window while scrolling */}
             <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
               <div
-                className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent"
                 style={{
                   transform: 'translateX(calc(var(--p) * 450%)) skewX(-20deg)',
                   opacity: 'calc(var(--p) * (1 - var(--p)) * 4)',
@@ -339,25 +338,25 @@ const HeroSection = () => {
 
                 {/* Workspace Live Stat Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-indigo-200 transition" style={{ transform: 'translateY(calc((1 - var(--p)) * 16px))' }}>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-indigo-200 transition">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Applied
                     </p>
                     <p className="text-xl font-extrabold text-slate-900 mt-1">48</p>
                   </div>
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-emerald-200 transition" style={{ transform: 'translateY(calc((1 - var(--p)) * 24px))' }}>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-emerald-200 transition">
                     <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Interviews
                     </p>
                     <p className="text-xl font-extrabold text-slate-900 mt-1">9</p>
                   </div>
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-amber-200 transition" style={{ transform: 'translateY(calc((1 - var(--p)) * 32px))' }}>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-amber-200 transition">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Saved
                     </p>
                     <p className="text-xl font-extrabold text-slate-900 mt-1">21</p>
                   </div>
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-purple-200 transition" style={{ transform: 'translateY(calc((1 - var(--p)) * 40px))' }}>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs hover:border-purple-200 transition">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-500" /> Offers
                     </p>
@@ -375,7 +374,7 @@ const HeroSection = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-indigo-50/30 transition" style={{ transform: 'translateX(calc((1 - var(--p)) * -28px))' }}>
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-indigo-50/30 transition">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shadow-2xs">
                           NL
@@ -393,7 +392,7 @@ const HeroSection = () => {
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-purple-50/30 transition" style={{ transform: 'translateX(calc((1 - var(--p)) * 28px))' }}>
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 hover:bg-purple-50/30 transition">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center shadow-2xs">
                           AC
@@ -416,15 +415,8 @@ const HeroSection = () => {
             </div>
           </div>
 
-          {/* Floating Interview Prep Child Window Overlay (Levitating Floating Animation) */}
-          <div
-            className="absolute -bottom-16 -right-3 sm:right-6 max-w-xs sm:max-w-md w-full z-20 hidden sm:block"
-            style={{
-              transform:
-                'translateZ(calc((1 - var(--p)) * 120px)) translate3d(calc(var(--p) * 18px), calc(var(--p) * 14px), 0) scale(calc(1 + var(--p) * 0.06))',
-              transition: 'transform 0.12s ease-out',
-            }}
-          >
+          {/* Floating Interview Prep Child Window Overlay */}
+          <div className="absolute -bottom-10 -right-3 sm:right-6 max-w-xs sm:max-w-md w-full z-20 hidden sm:block">
           <div className="animate-float-slow bg-white rounded-xl shadow-[0_25px_60px_rgba(0,0,0,0.18)] border border-slate-200/90 overflow-hidden hover:scale-[1.02] transition-transform duration-300">
             {/* Child Browser Bar */}
             <div className="bg-slate-100/90 border-b border-slate-200/80 px-3 py-1.5 flex items-center justify-between">
