@@ -117,26 +117,13 @@ const HRDashboard = () => {
               variant="primary"
               size="md"
               leftIcon={Plus}
-              disabled={isHRPending}
-              className={`text-white shadow-lg ${isHRPending ? 'bg-slate-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'}`}
+              className="text-white shadow-lg bg-purple-600 hover:bg-purple-500"
             >
               Create New Job
             </Button>
           </Link>
         </div>
       </div>
-
-      {isHRPending && (
-        <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center gap-3 text-amber-950 text-xs font-semibold shadow-xs">
-          <Clock className="w-6 h-6 text-amber-600 shrink-0" />
-          <div>
-            <p className="font-extrabold text-sm text-amber-950">Registration Pending Administrator Approval</p>
-            <p className="text-amber-800">
-              Welcome to HireFlow AI! Your HR Recruiter account registration is currently undergoing Admin review. Once an Administrator approves your account, you will be able to post job openings.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -91,7 +91,7 @@ const Register = () => {
       const userObj = await login(formData.email.trim(), formData.password);
       
       if (userObj?.role === 'hr') {
-        toast.success('HR account registered! Account is pending Admin approval.');
+        toast.success('HR Recruiter account registered! You can start posting jobs immediately.');
         navigate('/hr/dashboard');
       } else {
         toast.success('Candidate account created successfully! Welcome to HireFlow AI.');
@@ -164,7 +164,7 @@ const Register = () => {
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 {isHRMode
-                  ? 'Sign up to post jobs and manage candidate hiring pipelines (Requires Admin Review).'
+                  ? 'Sign up to post jobs and manage candidate hiring pipelines immediately.'
                   : 'Create your account to apply for jobs and track applications in real-time.'}
               </p>
             </div>

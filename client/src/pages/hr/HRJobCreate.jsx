@@ -8,7 +8,7 @@ import Textarea from '../../components/ui/Textarea';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Briefcase, Building2, MapPin, DollarSign, CheckCircle2 } from 'lucide-react';
 
 const HRJobCreate = () => {
   const { id } = useParams();
@@ -16,8 +16,6 @@ const HRJobCreate = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
-
-  const isHRPending = user?.role === 'hr' && user?.accountStatus === 'pending';
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingJob, setLoadingJob] = useState(false);
@@ -49,7 +47,7 @@ const HRJobCreate = () => {
           company: job.company || 'TechCorp AI Solutions',
           department: job.department || 'Engineering',
           location: job.location || '',
-          workMode: job.workMode || 'Remote',
+          workMode: job.workMode === 'Onsite' ? 'On-site' : job.workMode || 'Remote',
           employmentType: job.employmentType || 'Full-time',
           status: job.status || 'Active',
           salaryMin: job.salaryMin || 100000,
@@ -136,18 +134,6 @@ const HRJobCreate = () => {
         </p>
       </div>
 
-      {isHRPending && (
-        <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center gap-3 text-amber-950 text-xs font-semibold shadow-xs">
-          <Clock className="w-6 h-6 text-amber-600 shrink-0" />
-          <div>
-            <p className="font-extrabold text-sm text-amber-950">Account Pending Administrator Approval</p>
-            <p className="text-amber-800">
-              Your HR Recruiter account is currently awaiting Admin approval. You will be able to publish jobs as soon as an Administrator approves your account.
-            </p>
-          </div>
-        </div>
-      )}
-
       <Card variant="default" className="shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -195,7 +181,7 @@ const HRJobCreate = () => {
                 options={[
                   { value: 'Remote', label: 'Remote' },
                   { value: 'Hybrid', label: 'Hybrid' },
-                  { value: 'Onsite', label: 'Onsite' },
+                  { value: 'On-site', label: 'On-site' },
                 ]}
               />
               <Select
@@ -283,9 +269,8 @@ const HRJobCreate = () => {
                 variant="primary"
                 size="md"
                 isLoading={isSubmitting}
-                disabled={isHRPending}
                 leftIcon={CheckCircle2}
-                className={`text-white ${isHRPending ? 'bg-slate-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500'}`}
+                className="text-white bg-purple-600 hover:bg-purple-500"
               >
                 {isEditMode ? 'Save Job Changes' : 'Publish Job Posting'}
               </Button>

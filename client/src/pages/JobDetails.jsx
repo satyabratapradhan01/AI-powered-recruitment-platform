@@ -4,10 +4,12 @@ import { getJobByIdApi, createApplicationApi, getApplicationsApi } from '../serv
 import Card, { CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import { SkeletonCard } from '../components/ui/SkeletonLoader';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft,
   MapPin,
@@ -18,12 +20,15 @@ import {
   CheckCircle2,
   Building2,
   Sparkles,
+  User,
+  AlertTriangle,
 } from 'lucide-react';
 
 const JobDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +37,7 @@ const JobDetails = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [existingApplication, setExistingApplication] = useState(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     fetchJobDetails();
@@ -63,8 +69,32 @@ const JobDetails = () => {
     }
   };
 
+  const isProfileComplete = (userObj) => {
+    if (!userObj) return false;
+    const hasSkills = Array.isArray(userObj.skills) && userObj.skills.length > 0;
+    const hasResume = Boolean(
+      userObj.resume &&
+        (userObj.resume.fileUrl || userObj.resume.fileName || userObj.resume.fileKey || userObj.resume.parsedText)
+    );
+    const prof = userObj.profile || {};
+    const hasDetails = Boolean(
+      prof.headline?.trim() ||
+        prof.bio?.trim() ||
+        prof.phone?.trim() ||
+        prof.location?.trim()
+    );
+    return hasSkills || hasResume || hasDetails;
+  };
+
   const handleApply = async () => {
     if (!job) return;
+
+    if (!isProfileComplete(user)) {
+      setProfileModalOpen(true);
+      toast.warning('Please complete your profile before applying for jobs.');
+      return;
+    }
+
     try {
       setIsApplying(true);
       const res = await createApplicationApi({
@@ -258,6 +288,45 @@ const JobDetails = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Profile Setup Required Modal */}
+      <Modal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        title="Complete Profile Before Applying"
+        description="Recruiters evaluate candidate profiles and skills before processing applications."
+        size="md"
+      >
+        <div className="space-y-4 py-2">
+          <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-start gap-3">
+            <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-xs text-amber-950">
+              <p className="font-extrabold text-sm text-amber-950">Candidate Profile Incomplete</p>
+              <p className="text-amber-800 leading-relaxed">
+                You have not updated your candidate profile yet. Please add your skills, contact information, professional headline, or upload your resume so recruiters can review your application.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button variant="outline" size="sm" onClick={() => setProfileModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={User}
+              onClick={() => {
+                setProfileModalOpen(false);
+                navigate('/profile');
+              }}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white"
+            >
+              Update Profile Now
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -28,6 +28,13 @@ import {
   Save,
   ExternalLink,
   Award,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Link2,
+  GraduationCap,
+  Briefcase,
 } from 'lucide-react';
 
 const HRApplicants = () => {
@@ -344,98 +351,259 @@ const HRApplicants = () => {
       </Card>
 
       {/* Candidate Details Modal */}
-      {selectedApplicant && (
-        <Modal
-          isOpen={detailModalOpen}
-          onClose={() => setDetailModalOpen(false)}
-          title={`Candidate Profile — ${selectedApplicant.candidateId?.name || 'Applicant'}`}
-          description={`Applied for ${selectedApplicant.jobTitle || 'Role'}`}
-          size="lg"
-        >
-          <div className="space-y-6 py-2 text-xs text-slate-700">
-            {/* Action Bar */}
-            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-wrap items-center justify-between gap-2">
-              <span className="font-bold text-slate-800">Pipeline Status Action:</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="primary"
-                  size="xs"
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  leftIcon={Award}
-                  onClick={() => {
-                    setDetailModalOpen(false);
-                    navigate('/hr/offers', { state: { preselectAppId: selectedApplicant._id } });
-                  }}
-                >
-                  Provide Offer Letter
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  isLoading={updatingStatus}
-                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Shortlisted')}
-                >
-                  Shortlist
-                </Button>
-                <Button
-                  variant="success"
-                  size="xs"
-                  isLoading={updatingStatus}
-                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Selected')}
-                >
-                  Select Candidate
-                </Button>
-                <Button
-                  variant="danger"
-                  size="xs"
-                  isLoading={updatingStatus}
-                  onClick={() => handleUpdateStatus(selectedApplicant._id, 'Rejected')}
-                >
-                  Reject
-                </Button>
-              </div>
-            </div>
+      {selectedApplicant && (() => {
+        const cand = selectedApplicant.candidateId || {};
+        const candName = cand.name || selectedApplicant.candidateName || 'Applicant';
+        const candEmail = cand.email || selectedApplicant.email || 'N/A';
+        const candPhone = cand.profile?.phone || cand.phone || 'Not provided';
+        const candLocation = cand.profile?.location || cand.location || 'Not specified';
+        const candHeadline = cand.profile?.headline || cand.headline || 'Job Seeker';
+        const candBio = cand.profile?.bio || cand.bio || '';
+        const candSkills = cand.skills || selectedApplicant.skills || [];
+        const candEducation = cand.education || [];
+        const candExperience = cand.experience || [];
+        const candLinkedin = cand.profile?.linkedin || cand.linkedin;
+        const candGithub = cand.profile?.github || cand.github;
+        const candWebsite = cand.profile?.website || cand.profile?.portfolio || cand.website;
 
-            {/* Resume Preview Card */}
-            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-indigo-600" />
-                <div>
-                  <p className="font-bold text-slate-900">
-                    {selectedApplicant.resume?.fileName || selectedApplicant.resume?.originalName || 'Candidate Resume'}
-                  </p>
-                  <p className="text-[10px] text-slate-400">Stored in Cloudflare R2 Bucket</p>
+        return (
+          <Modal
+            isOpen={detailModalOpen}
+            onClose={() => setDetailModalOpen(false)}
+            title={`Candidate Profile — ${candName}`}
+            description={`Applied for ${selectedApplicant.jobTitle || 'Role'}`}
+            size="lg"
+          >
+            <div className="space-y-6 py-2 text-xs text-slate-700">
+              {/* Action Bar */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-wrap items-center justify-between gap-2">
+                <span className="font-bold text-slate-800">Pipeline Status Action:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                    leftIcon={Award}
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      navigate('/hr/offers', { state: { preselectAppId: selectedApplicant._id } });
+                    }}
+                  >
+                    Provide Offer Letter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    isLoading={updatingStatus}
+                    onClick={() => handleUpdateStatus(selectedApplicant._id, 'Shortlisted')}
+                  >
+                    Shortlist
+                  </Button>
+                  <Button
+                    variant="success"
+                    size="xs"
+                    isLoading={updatingStatus}
+                    onClick={() => handleUpdateStatus(selectedApplicant._id, 'Selected')}
+                  >
+                    Select Candidate
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="xs"
+                    isLoading={updatingStatus}
+                    onClick={() => handleUpdateStatus(selectedApplicant._id, 'Rejected')}
+                  >
+                    Reject
+                  </Button>
                 </div>
               </div>
-              {resumeSignedUrl ? (
-                <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="xs" rightIcon={ExternalLink}>
-                    View Resume PDF
-                  </Button>
-                </a>
-              ) : (
-                <span className="text-[11px] text-slate-400 italic">No resume attached</span>
-              )}
-            </div>
 
-            {/* Recruiter Notes */}
-            <div className="space-y-2">
-              <h4 className="font-bold text-slate-900">Recruiter Evaluation Notes</h4>
-              <Textarea
-                rows={3}
-                value={recruiterNote}
-                onChange={(e) => setRecruiterNote(e.target.value)}
-                placeholder="Add private evaluation notes, screening observations, or team feedback..."
-              />
-              <div className="flex justify-end">
-                <Button variant="primary" size="xs" leftIcon={Save} onClick={handleSaveNotes}>
-                  Save Notes
-                </Button>
+              {/* Comprehensive Candidate Profile Card */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/60">
+                  <div className="flex items-center gap-3.5">
+                    <Avatar name={candName} size="md" status="online" className="shrink-0 shadow-xs" />
+                    <div>
+                      <h3 className="text-base font-extrabold text-slate-900 leading-snug">{candName}</h3>
+                      <p className="text-xs font-semibold text-purple-600">{candHeadline}</p>
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 mt-1">
+                        <span className="flex items-center gap-1 font-medium text-slate-600">
+                          <Mail className="w-3.5 h-3.5 text-slate-400" /> {candEmail}
+                        </span>
+                        {candPhone !== 'Not provided' && (
+                          <span className="flex items-center gap-1 font-medium text-slate-600">
+                            <Phone className="w-3.5 h-3.5 text-slate-400" /> {candPhone}
+                          </span>
+                        )}
+                        {candLocation !== 'Not specified' && (
+                          <span className="flex items-center gap-1 font-medium text-slate-600">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" /> {candLocation}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant={selectedApplicant.atsScore >= 75 ? 'purple' : 'info'} showDot size="sm">
+                      {selectedApplicant.atsScore ? `${selectedApplicant.atsScore}% AI ATS Match` : 'Candidate Profile'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Candidate Bio / Summary */}
+                {candBio && (
+                  <div className="space-y-1">
+                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Candidate Summary / Bio</h4>
+                    <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-200/60 italic">
+                      "{candBio}"
+                    </p>
+                  </div>
+                )}
+
+                {/* Technical Skills Stack */}
+                <div className="space-y-1.5">
+                  <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Technical Skills & Expertise
+                  </h4>
+                  {candSkills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {candSkills.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">No technical skills listed on candidate profile.</p>
+                  )}
+                </div>
+
+                {/* Online Profiles & Portfolio */}
+                {(candLinkedin || candGithub || candWebsite) && (
+                  <div className="space-y-1.5 pt-2 border-t border-slate-200/60">
+                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Online Profiles & Links</h4>
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      {candLinkedin && (
+                        <a href={candLinkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
+                          <Link2 className="w-3.5 h-3.5" /> LinkedIn Profile
+                        </a>
+                      )}
+                      {candGithub && (
+                        <a href={candGithub} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold text-slate-700 hover:underline">
+                          <Link2 className="w-3.5 h-3.5" /> GitHub Profile
+                        </a>
+                      )}
+                      {candWebsite && (
+                        <a href={candWebsite} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold text-purple-600 hover:underline">
+                          <Globe className="w-3.5 h-3.5" /> Personal Portfolio
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Work Experience */}
+                {candExperience.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200/60">
+                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                      <Briefcase className="w-3.5 h-3.5 text-slate-500" /> Work Experience History
+                    </h4>
+                    <div className="space-y-2">
+                      {candExperience.map((exp, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200/60 text-xs space-y-1">
+                          <div className="flex items-center justify-between font-bold text-slate-900">
+                            <span>{exp.title} {exp.company ? `at ${exp.company}` : ''}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {exp.startDate ? new Date(exp.startDate).getFullYear() : ''} - {exp.isCurrent ? 'Present' : exp.endDate ? new Date(exp.endDate).getFullYear() : ''}
+                            </span>
+                          </div>
+                          {exp.description && <p className="text-slate-600 text-[11px]">{exp.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Education History */}
+                {candEducation.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200/60">
+                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-slate-500" /> Education History
+                    </h4>
+                    <div className="space-y-2">
+                      {candEducation.map((edu, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200/60 text-xs flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-slate-900">{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</p>
+                            <p className="text-[11px] text-slate-500">{edu.institution}</p>
+                          </div>
+                          {(edu.startYear || edu.endYear) && (
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              {edu.startYear} - {edu.endYear || 'Present'}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Candidate Cover Letter */}
+                {selectedApplicant.coverLetter && (
+                  <div className="space-y-1 pt-2 border-t border-slate-200/60">
+                    <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Candidate Cover Letter</h4>
+                    <p className="text-xs text-slate-700 bg-white p-3 rounded-xl border border-slate-200/60 leading-relaxed">
+                      {selectedApplicant.coverLetter}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Resume Preview Card */}
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-6 h-6 text-indigo-600" />
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {selectedApplicant.resume?.fileName || selectedApplicant.resume?.originalName || 'Candidate Resume'}
+                    </p>
+                    <p className="text-[10px] text-slate-400">Stored in Cloudflare R2 Bucket</p>
+                  </div>
+                </div>
+                {resumeSignedUrl ? (
+                  <a href={resumeSignedUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="xs" rightIcon={ExternalLink}>
+                      View Resume PDF
+                    </Button>
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-slate-400 italic">No resume attached</span>
+                )}
+              </div>
+
+              {/* Recruiter Notes */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-900">Recruiter Evaluation Notes</h4>
+                <Textarea
+                  rows={3}
+                  value={recruiterNote}
+                  onChange={(e) => setRecruiterNote(e.target.value)}
+                  placeholder="Add private evaluation notes, screening observations, or team feedback..."
+                />
+                <div className="flex justify-end">
+                  <Button variant="primary" size="xs" leftIcon={Save} onClick={handleSaveNotes}>
+                    Save Notes
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
     </div>
   );
 };

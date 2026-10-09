@@ -34,7 +34,7 @@ export const registerUser = async ({ name, email, password, role }) => {
 
   if (role === 'hr') {
     assignedRole = 'hr';
-    initialStatus = 'pending'; // HR signup requires Admin approval before posting jobs
+    initialStatus = 'active'; // HR signup is active directly, allowing instant job posting
   } else if (role === 'seeker' || role === 'job_seeker') {
     assignedRole = 'job_seeker';
     initialStatus = 'active';
@@ -51,26 +51,14 @@ export const registerUser = async ({ name, email, password, role }) => {
     accountStatus: initialStatus,
   });
 
-  // If HR account registered with pending status, create notifications
-  if (assignedRole === 'hr' && initialStatus === 'pending') {
+  if (assignedRole === 'hr') {
     // Notify HR user
     await createNotification({
       userId: user._id,
       type: 'account_status',
-      title: 'HR Registration Pending Admin Approval',
-      message: 'Your HR Recruiter account registration is currently pending Administrator approval. You will be able to post jobs once an Administrator approves your request.',
+      title: 'HR Recruiter Account Registered',
+      message: 'Welcome to HireFlow AI! Your HR Recruiter account is active and you can start posting job openings immediately.',
     });
-
-    // Notify all Platform Admin users
-    const admins = await User.find({ role: 'admin' });
-    for (const admin of admins) {
-      await createNotification({
-        userId: admin._id,
-        type: 'hr_approval_request',
-        title: 'New HR Signup Pending Approval',
-        message: `New HR Recruiter ${user.name} (${user.email}) registered and is awaiting Admin approval.`,
-      });
-    }
   }
 
   return {

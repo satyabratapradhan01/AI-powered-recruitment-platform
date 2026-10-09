@@ -73,7 +73,7 @@ export const validateJobUpdate = (req, res, next) => {
     return next(new AppError('Invalid status. Allowed values: Active, Draft, Closed', 400));
   }
 
-  if (workMode && !['On-site', 'Hybrid', 'Remote'].includes(workMode)) {
+  if (workMode && !['On-site', 'Onsite', 'Hybrid', 'Remote'].includes(workMode)) {
     return next(new AppError('Invalid workMode. Allowed values: On-site, Hybrid, Remote', 400));
   }
 

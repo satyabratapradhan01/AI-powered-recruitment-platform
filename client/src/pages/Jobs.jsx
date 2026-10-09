@@ -95,7 +95,7 @@ const Jobs = () => {
               { value: 'All', label: 'All Work Modes' },
               { value: 'Remote', label: 'Remote' },
               { value: 'Hybrid', label: 'Hybrid' },
-              { value: 'Onsite', label: 'Onsite' },
+              { value: 'On-site', label: 'On-site' },
             ]}
             fullWidth={false}
           />

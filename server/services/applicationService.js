@@ -20,9 +20,34 @@ export const createApplication = async (userId, data) => {
 
   const candidateUser = await User.findById(userId);
 
+  if (!candidateUser) {
+    throw new AppError('Candidate user profile not found', 404);
+  }
+
+  // Enforce candidate profile completion check: Candidate must add/update profile before applying
+  const hasSkills = Array.isArray(candidateUser.skills) && candidateUser.skills.length > 0;
+  const hasResume = Boolean(
+    candidateUser.resume &&
+      (candidateUser.resume.fileUrl || candidateUser.resume.fileName || candidateUser.resume.fileKey || candidateUser.resume.parsedText)
+  );
+  const prof = candidateUser.profile || {};
+  const hasProfileDetails = Boolean(
+    prof.headline?.trim() ||
+      prof.bio?.trim() ||
+      prof.phone?.trim() ||
+      prof.location?.trim()
+  );
+
+  if (!hasSkills && !hasResume && !hasProfileDetails) {
+    throw new AppError(
+      'Please complete your candidate profile (add your skills, phone, headline, or resume) before applying for job openings.',
+      400
+    );
+  }
+
   // Use passed resume or pull candidate's default uploaded resume metadata
   let resumeData = resume;
-  if ((!resumeData || !resumeData.parsedText) && candidateUser && candidateUser.resume && candidateUser.resume.parsedText) {
+  if ((!resumeData || !resumeData.parsedText) && candidateUser.resume && candidateUser.resume.parsedText) {
     resumeData = {
       fileUrl: candidateUser.resume.fileUrl,
       fileName: candidateUser.resume.fileName,
