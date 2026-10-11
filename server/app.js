@@ -28,15 +28,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health Check Endpoints (supports both /api/health and /health)
-const healthCheckHandler = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Server is healthy and running',
-    timestamp: new Date().toISOString(),
-  });
-};
-app.get('/api/health', healthCheckHandler);
-app.get('/health', healthCheckHandler);
+
+app.get('/', (req, res)=>{
+  res.send("Api is working...")
+})
 
 // Serverless DB auto-connect middleware for all API requests
 let isSeeded = false;
