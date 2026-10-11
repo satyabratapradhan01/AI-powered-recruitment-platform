@@ -24,22 +24,35 @@ app.use(express.urlencoded({ extended: true }));
 // Serve local fallback static uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
+// Health Check Endpoints (supports both /api/health and /health)
+const healthCheckHandler = (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'Server is healthy and running',
     timestamp: new Date().toISOString(),
   });
-});
+};
+app.get('/api/health', healthCheckHandler);
+app.get('/health', healthCheckHandler);
 
-// API Routes
+// API Routes (supports both /api/* and /* in case Vercel rewrites strip /api prefix)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/applications', applicationRoutes);
+app.use('/applications', applicationRoutes);
+
 app.use('/api/jobs', jobRoutes);
+app.use('/jobs', jobRoutes);
+
 app.use('/api/resumes', resumeRoutes);
+app.use('/resumes', resumeRoutes);
+
 app.use('/api/interviews', interviewRoutes);
+app.use('/interviews', interviewRoutes);
+
 app.use('/api/notifications', notificationRoutes);
+app.use('/notifications', notificationRoutes);
 
 // Handle Unknown Routes (404 Not Found)
 app.use(notFoundHandler);

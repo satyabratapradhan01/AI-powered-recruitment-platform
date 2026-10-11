@@ -17,10 +17,10 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    } else {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
       throw error;
+    } else {
+      process.exit(1);
     }
   }
 };
