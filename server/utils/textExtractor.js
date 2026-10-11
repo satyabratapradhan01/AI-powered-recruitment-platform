@@ -2,7 +2,16 @@ import { createRequire } from 'module';
 import mammoth from 'mammoth';
 
 const require = createRequire(import.meta.url);
-const pdfModule = require('pdf-parse');
+let pdfModule = null;
+try {
+  pdfModule = require('pdf-parse/lib/pdf-parse.js');
+} catch (e1) {
+  try {
+    pdfModule = require('pdf-parse');
+  } catch (e2) {
+    console.warn('[TextExtractor] PDF parse module could not be initialized:', e2.message);
+  }
+}
 
 /**
  * Extract raw text from PDF or DOCX file buffers.

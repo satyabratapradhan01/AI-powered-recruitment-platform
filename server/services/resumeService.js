@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 import {
   PutObjectCommand,
   GetObjectCommand,
@@ -15,11 +17,25 @@ import AppError from '../utils/AppError.js';
  * Cloudflare R2 Private Resume Management & Text Extraction Service.
  */
 
-// Local fallback directory for offline development / mock mode
-const localUploadDir = path.join(process.cwd(), 'uploads', 'resumes');
-if (!fs.existsSync(localUploadDir)) {
-  fs.mkdirSync(localUploadDir, { recursive: true });
-}
+// Helper to determine safe directory for local development fallback
+const getLocalUploadDir = () => {
+  if (process.env.VERCEL) {
+    return path.join(os.tmpdir(), 'hireflow-uploads', 'resumes');
+  }
+  return path.join(process.cwd(), 'uploads', 'resumes');
+};
+
+const ensureLocalUploadDir = () => {
+  const dir = getLocalUploadDir();
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    console.warn('[Resume Storage] Could not create local fallback directory:', err.message);
+  }
+  return dir;
+};
 
 export const uploadResume = async (userId, file) => {
   const user = await User.findById(userId);
@@ -27,8 +43,9 @@ export const uploadResume = async (userId, file) => {
     throw new AppError('User not found', 404);
   }
 
-  const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const fileKey = `resumes/${userId}/${Date.now()}-${sanitizedFileName}`;
+  const sanitizedFileName = (file.originalname || 'resume.pdf').replace(/[^a-zA-Z0-9.-]/g, '_');
+  const uniquePrefix = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const fileKey = `resumes/${userId}/${uniquePrefix}-${sanitizedFileName}`;
 
   let fileUrl = '';
 
@@ -42,7 +59,7 @@ export const uploadResume = async (userId, file) => {
         Bucket: bucketName,
         Key: fileKey,
         Body: file.buffer,
-        ContentType: file.mimetype,
+        ContentType: file.mimetype || 'application/octet-stream',
       });
 
       await r2Client.send(putCommand);
@@ -55,10 +72,22 @@ export const uploadResume = async (userId, file) => {
 
       fileUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 3600 });
     } catch (r2Error) {
-      console.warn('Cloudflare R2 Upload Warning, using local fallback:', r2Error.message);
+      console.error('Cloudflare R2 Upload Error:', r2Error.message);
+      if (process.env.VERCEL) {
+        throw new AppError(
+          `Resume upload failed: Unable to upload to Cloudflare R2 storage (${r2Error.message}). Please verify R2 credentials and bucket permissions in Vercel settings.`,
+          500
+        );
+      }
       fileUrl = await saveLocalFallback(file, fileKey);
     }
   } else {
+    if (process.env.VERCEL) {
+      throw new AppError(
+        'Cloudflare R2 storage is not configured. Please set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_BUCKET_NAME in Vercel Project Settings -> Environment Variables.',
+        500
+      );
+    }
     fileUrl = await saveLocalFallback(file, fileKey);
   }
 
@@ -163,12 +192,13 @@ export const deleteResume = async (userId) => {
   }
 
   // Delete local fallback file if exists
-  const localFilePath = path.join(localUploadDir, path.basename(fileKey));
-  if (fs.existsSync(localFilePath)) {
-    try {
+  try {
+    const dir = getLocalUploadDir();
+    const localFilePath = path.join(dir, path.basename(fileKey));
+    if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
-    } catch (_) {}
-  }
+    }
+  } catch (_) {}
 
   user.resume = {
     fileUrl: '',
@@ -185,8 +215,9 @@ export const deleteResume = async (userId) => {
 };
 
 const saveLocalFallback = async (file, fileKey) => {
+  const dir = ensureLocalUploadDir();
   const safeFilename = path.basename(fileKey);
-  const targetPath = path.join(localUploadDir, safeFilename);
+  const targetPath = path.join(dir, safeFilename);
   await fs.promises.writeFile(targetPath, file.buffer);
   return `/uploads/resumes/${safeFilename}`;
 };
