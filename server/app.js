@@ -9,6 +9,9 @@ import interviewRoutes from './routes/interviewRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 
+import connectDB from './config/db.js';
+import { seedAdminUser } from './utils/seedAdmin.js';
+
 const app = express();
 
 // Enable CORS for separate frontend/backend deployments
@@ -34,6 +37,25 @@ const healthCheckHandler = (req, res) => {
 };
 app.get('/api/health', healthCheckHandler);
 app.get('/health', healthCheckHandler);
+
+// Serverless DB auto-connect middleware for all API requests
+let isSeeded = false;
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    if (!isSeeded) {
+      await seedAdminUser();
+      isSeeded = true;
+    }
+    next();
+  } catch (err) {
+    console.error('Serverless DB middleware connection error:', err.message);
+    return res.status(500).json({
+      status: 'error',
+      message: `Database Connection Error: ${err.message}. Please verify MONGODB_URI is set under Vercel Project Settings -> Environment Variables, and MongoDB Atlas IP Access List allows 0.0.0.0/0.`,
+    });
+  }
+});
 
 // API Routes (supports both /api/* and /* in case Vercel rewrites strip /api prefix)
 app.use('/api/auth', authRoutes);
