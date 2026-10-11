@@ -27,11 +27,20 @@ app.use(express.urlencoded({ extended: true }));
 // Serve local fallback static uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Health Check Endpoints (supports both /api/health and /health)
+// Health Check Endpoints
+const healthCheckHandler = (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'HireFlow AI Backend API is running',
+    timestamp: new Date().toISOString(),
+  });
+};
+app.get('/api/health', healthCheckHandler);
+app.get('/health', healthCheckHandler);
 
-app.get('/', (req, res)=>{
-  res.send("Api is working...")
-})
+app.get('/', (req, res) => {
+  res.status(200).send('Api is working...');
+});
 
 // Serverless DB auto-connect middleware for all API requests
 let isSeeded = false;

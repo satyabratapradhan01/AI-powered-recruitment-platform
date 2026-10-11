@@ -6,9 +6,9 @@ dotenv.config();
 const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
 const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
 const smtpUser = process.env.SMTP_USER || '';
-const smtpPass = process.env.SMTP_PASSWORD || '';
-const emailFrom = process.env.EMAIL_FROM || smtpUser || 'no-reply@recruitmentplatform.com';
-const platformUrl = process.env.PLATFORM_URL || 'http://localhost:5173';
+const smtpPass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '';
+const emailFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || 'no-reply@hireflow.com';
+const platformUrl = process.env.CLIENT_URL || process.env.PLATFORM_URL || 'http://localhost:5173';
 
 export const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
 

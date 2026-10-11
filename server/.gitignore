@@ -1,3 +1,15 @@
+# Environment variables
 .env
-node_modules
-.env.example
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Uploads & temporary files
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
