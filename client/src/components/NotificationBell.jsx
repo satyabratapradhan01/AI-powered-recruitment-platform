@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, CheckCheck, Calendar, Briefcase, Info, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  getNotificationsApi,
+  markNotificationReadApi,
+  markAllNotificationsReadApi,
+} from '../services/api';
 
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -15,16 +19,10 @@ const NotificationBell = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch('http://localhost:5000/api/notifications', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        setNotifications(json.data || []);
-        setUnreadCount(json.unreadCount || 0);
+      const res = await getNotificationsApi();
+      if (res && res.data) {
+        setNotifications(res.data.data || []);
+        setUnreadCount(res.data.unreadCount || 0);
       }
     } catch (err) {
       // Graceful fallback for mock mode or offline server
@@ -50,33 +48,19 @@ const NotificationBell = () => {
   const handleMarkAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
+      await markNotificationReadApi(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {}
   };
 
   const handleMarkAllRead = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/notifications/read-all', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        setUnreadCount(0);
-      }
+      await markAllNotificationsReadApi();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (err) {}
   };
 
