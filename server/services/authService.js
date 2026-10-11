@@ -18,7 +18,7 @@ export const generateToken = (user) => {
       role: normalizedRole,
     },
     process.env.JWT_SECRET || 'super_secret_jwt_key_12345',
-    { expiresIn: '30d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
 };
 
